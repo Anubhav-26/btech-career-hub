@@ -1,0 +1,526 @@
+// =============================================================================
+// B.Tech Career Hub — Prisma Schema
+// See docs/02-database-schema.md for the design rationale behind every
+// decision made here (why Json metadata, why enums, why indexes, etc).
+// =============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// -----------------------------------------------------------------------------
+// Enums
+// -----------------------------------------------------------------------------
+
+enum Branch {
+  CSE
+  ECE
+  ME
+  CE
+  EE
+  IT
+  CHEMICAL
+  OTHER
+}
+
+enum Role {
+  STUDENT
+  ADMIN
+}
+
+// Live tracks (GATE, PSU, CAT, PLACEMENT) ship in the MVP.
+// Future tracks exist in the enum today so onboarding a new track is an
+// admin action (create Exam row, isActive: true), never a migration.
+enum ExamCategory {
+  GATE
+  PSU
+  CAT
+  PLACEMENT
+  CUET_PG
+  ESE
+  GRE
+  TOEFL
+  IELTS
+  ISRO
+  DRDO
+  BARC
+}
+
+enum ResourceType {
+  NOTES
+  FORMULA_SHEET
+  BOOK
+  PDF
+  LINK
+}
+
+enum CompanyType {
+  PSU
+  PLACEMENT
+}
+
+enum ProgressStatus {
+  VIEWED
+  IN_PROGRESS
+  COMPLETED
+}
+
+// Discriminator for UserProgress's polymorphic content reference.
+enum ProgressContentType {
+  RESOURCE
+  PYQ
+  VIDEO
+  ROADMAP_STEP
+  EXAM
+}
+
+// -----------------------------------------------------------------------------
+// User
+// -----------------------------------------------------------------------------
+
+model User {
+  id           String   @id @default(cuid())
+  firebaseUid  String   @unique
+  email        String   @unique
+  name         String?
+  avatarUrl    String?
+  role         Role     @default(STUDENT)
+
+  // Onboarding state
+  branch       Branch?
+  year         Int? // 1-4
+  goals        ExamCategory[] // multi-select: a student can target GATE + Placements at once
+  onboardedAt  DateTime?
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  progress             UserProgress[]
+  savedItems           SavedItem[]
+  studyLogs            StudyLog[]
+  usergoals                Goal[]
+  mockTests            MockTest[]
+  pinnedCountdowns     PinnedCountdown[]
+  videoProgress        VideoProgress[]
+  resourceCompletions  ResourceCompletion[]
+
+  @@index([role])
+}
+
+// -----------------------------------------------------------------------------
+// Exam (the one polymorphic shell — see docs/02 section 2.2)
+// -----------------------------------------------------------------------------
+
+model Exam {
+  id            String       @id @default(cuid())
+  slug          String       @unique // e.g. "gate-cse", "cat", "placements"
+  title         String // "GATE — Computer Science"
+  shortTitle    String // "GATE CSE", used in chips/cards
+  category      ExamCategory
+  branch        Branch? // null = branch-agnostic (e.g. CAT, Placements)
+  isActive      Boolean      @default(true)
+
+  // Content shell — shared across every track
+  overview      String       @db.Text
+  eligibility   String       @db.Text
+  examPattern   String       @db.Text
+  syllabus      String       @db.Text
+
+  // Track-specific shape, validated by a category-keyed Zod discriminated
+  // union at the API boundary (lib/validations/exam.ts). See docs/02 §2.3.
+  metadata      Json         @default("{}")
+
+  examDate      DateTime? // next upcoming sitting, drives "Upcoming Exams"
+  applicationDeadline DateTime?
+
+  coverImageUrl String?
+
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  resources     Resource[]
+  pyqs          PYQ[]
+  videos        Video[]
+  cutoffs       Cutoff[]
+  faqs          FAQ[]
+  roadmaps      Roadmap[]
+  companies     ExamCompany[]
+  progress      UserProgress[]
+  savedItems    SavedItem[]
+
+  @@index([category])
+  @@index([branch])
+  @@index([isActive])
+}
+
+model Cutoff {
+  id       String  @id @default(cuid())
+  examId   String
+  exam     Exam    @relation(fields: [examId], references: [id], onDelete: Cascade)
+  year     Int
+  category String // e.g. "General", "OBC-NCL", "SC", "ST" or a branch/role label
+  value    Float // score / rank / percentile depending on exam category
+  unit     String // "score", "rank", "percentile"
+
+  @@index([examId, year])
+}
+
+model FAQ {
+  id       String @id @default(cuid())
+  examId   String
+  exam     Exam   @relation(fields: [examId], references: [id], onDelete: Cascade)
+  question String
+  answer   String @db.Text
+  order    Int    @default(0)
+
+  @@index([examId])
+}
+
+// -----------------------------------------------------------------------------
+// Resources / PYQs / Videos — separate write models, unified read shape
+// (see docs/02 §2.1)
+// -----------------------------------------------------------------------------
+
+model Resource {
+  id          String        @id @default(cuid())
+  title       String
+  description String?       @db.Text
+  type        ResourceType
+  fileUrl     String // Cloudinary / S3 URL
+  fileType    String? // "pdf", "docx", "png"...
+  sizeBytes   Int?
+
+  examId      String
+  exam        Exam          @relation(fields: [examId], references: [id], onDelete: Cascade)
+  branch      Branch?
+  subject     String // free text subject tag, e.g. "Operating Systems"
+
+  uploadedById String?
+  saveCount    Int          @default(0)
+  viewCount    Int          @default(0)
+
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  progress             UserProgress[]
+  savedItems           SavedItem[]
+  resourceCompletions  ResourceCompletion[]
+
+  @@index([examId, branch, subject, type])
+}
+
+model PYQ {
+  id           String   @id @default(cuid())
+  examId       String
+  exam         Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
+  year         Int
+  session      String? // "Slot 1", "Forenoon", null if N/A
+  subject      String?
+  questionUrl  String // PDF of the question paper
+  solutionUrl  String? // optional solution PDF
+  hasSolution  Boolean  @default(false)
+
+  createdAt    DateTime @default(now())
+
+  progress     UserProgress[]
+  savedItems   SavedItem[]
+
+  @@index([examId, year])
+}
+
+model Video {
+  id              String   @id @default(cuid())
+  examId          String
+  exam            Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
+  title           String
+  youtubeId       String // e.g. "dQw4w9WgXcQ"
+  channel         String
+  subject         String?
+  durationSeconds Int?
+  thumbnailUrl    String?
+
+  createdAt       DateTime @default(now())
+
+  progress        UserProgress[]
+  videoProgress   VideoProgress[]
+
+  @@index([examId, subject])
+}
+
+// -----------------------------------------------------------------------------
+// Companies (PSU recruiters + on-campus Placement recruiters)
+// -----------------------------------------------------------------------------
+
+model Company {
+  id            String        @id @default(cuid())
+  slug          String        @unique
+  name          String
+  logoUrl       String?
+  companyType   CompanyType
+  description   String?       @db.Text
+  website       String?
+
+  // Placement-specific
+  avgPackageLpa Float?
+  rolesHiredFor String[]
+
+  // PSU-specific
+  recruitsViaGate Boolean?    @default(false)
+
+  exams         ExamCompany[]
+
+  createdAt     DateTime      @default(now())
+
+  @@index([companyType])
+}
+
+// Many-to-many: a company (e.g. a PSU) can be linked to multiple exams'
+// worth of recruitment context, and an exam page lists multiple companies.
+model ExamCompany {
+  examId    String
+  companyId String
+  exam      Exam    @relation(fields: [examId], references: [id], onDelete: Cascade)
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@id([examId, companyId])
+}
+
+// -----------------------------------------------------------------------------
+// Roadmaps (powers the dashboard "Your Roadmap" widget + Placement DSA roadmap)
+// -----------------------------------------------------------------------------
+
+model Roadmap {
+  id          String        @id @default(cuid())
+  examId      String
+  exam        Exam          @relation(fields: [examId], references: [id], onDelete: Cascade)
+  title        String // "GATE CSE — 12 Month Plan", "DSA Roadmap"
+  description  String?       @db.Text
+
+  steps        RoadmapStep[]
+
+  createdAt    DateTime      @default(now())
+
+  @@index([examId])
+}
+
+model RoadmapStep {
+  id          String   @id @default(cuid())
+  roadmapId   String
+  roadmap     Roadmap  @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
+  order       Int
+  title       String
+  description String?  @db.Text
+  resourceUrl String? // optional deep link to a relevant resource
+
+  progress    UserProgress[]
+
+  @@index([roadmapId, order])
+}
+
+// -----------------------------------------------------------------------------
+// Progress + Saved Items
+// -----------------------------------------------------------------------------
+
+// Polymorphic fact table — exactly one of resourceId/pyqId/videoId/
+// roadmapStepId/examId is set, discriminated by contentType.
+// Enforced at the application layer (Zod refinement in services/progressService.ts)
+// since Postgres/Prisma don't support a clean native XOR constraint here.
+model UserProgress {
+  id            String              @id @default(cuid())
+  userId        String
+  user          User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  contentType   ProgressContentType
+  status        ProgressStatus      @default(VIEWED)
+
+  examId        String?
+  exam          Exam?               @relation(fields: [examId], references: [id], onDelete: SetNull)
+  resourceId    String?
+  resource      Resource?           @relation(fields: [resourceId], references: [id], onDelete: SetNull)
+  pyqId         String?
+  pyq           PYQ?                @relation(fields: [pyqId], references: [id], onDelete: SetNull)
+  videoId       String?
+  video         Video?              @relation(fields: [videoId], references: [id], onDelete: SetNull)
+  roadmapStepId String?
+  roadmapStep   RoadmapStep?        @relation(fields: [roadmapStepId], references: [id], onDelete: SetNull)
+
+  lastViewedAt  DateTime            @default(now())
+  createdAt     DateTime            @default(now())
+  // Video progress — seconds watched; only meaningful when contentType = VIDEO
+  watchSeconds  Int                 @default(0)
+
+  @@index([userId, lastViewedAt])
+  @@index([userId, contentType])
+}
+
+model SavedItem {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  examId     String?
+  exam       Exam?     @relation(fields: [examId], references: [id], onDelete: Cascade)
+  resourceId String?
+  resource   Resource? @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  pyqId      String?
+  pyq        PYQ?      @relation(fields: [pyqId], references: [id], onDelete: Cascade)
+
+  createdAt  DateTime  @default(now())
+
+  @@index([userId])
+}
+
+// =============================================================================
+// Phase 1 — Advanced Features
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// StudyLog — powers the heatmap, daily tracker, and streak calculations
+// One row per session. Multiple sessions per day are fine and summed.
+// -----------------------------------------------------------------------------
+model StudyLog {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date        DateTime @db.Date          // local date, stored UTC midnight
+  topic       String
+  subject     String
+  minutes     Int      // positive, validated at API boundary
+  notes       String?  @db.Text
+  examCategory ExamCategory?            // optional tag so subject-wise breakdown works
+
+  createdAt   DateTime @default(now())
+
+  @@index([userId, date])
+  @@index([userId, examCategory])
+}
+
+// -----------------------------------------------------------------------------
+// ExamCountdown — admin-curated countdowns (GATE, CAT, UPSC, SSC CGL, etc.)
+// Visible to all students without auth; students can pin ones to their dashboard.
+// -----------------------------------------------------------------------------
+model ExamCountdown {
+  id          String       @id @default(cuid())
+  title       String                          // "GATE 2026"
+  examDate    DateTime
+  category    ExamCategory?
+  description String?
+  isActive    Boolean      @default(true)
+  isPinnable  Boolean      @default(true)
+
+  pinnedBy    PinnedCountdown[]
+
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([examDate])
+}
+
+// Many-to-many: a student can pin several countdowns to their dashboard
+model PinnedCountdown {
+  userId      String
+  countdownId String
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  countdown   ExamCountdown @relation(fields: [countdownId], references: [id], onDelete: Cascade)
+
+  @@id([userId, countdownId])
+}
+
+// -----------------------------------------------------------------------------
+// Goal — student-defined goals with progress (0–100%)
+// -----------------------------------------------------------------------------
+model Goal {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String                          // "Complete DSA", "Solve 500 Questions"
+  description String?
+  targetValue Int      @default(100)          // 100 = percentage; can represent question count
+  currentValue Int     @default(0)
+  unit        String   @default("percent")    // "percent" | "questions" | "chapters" etc.
+  deadline    DateTime?
+  isCompleted Boolean  @default(false)
+  completedAt DateTime?
+
+  examCategory ExamCategory?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId, isCompleted])
+}
+
+// -----------------------------------------------------------------------------
+// MockTest — student-recorded test results for score tracking + Recharts graphs
+// -----------------------------------------------------------------------------
+model MockTest {
+  id          String       @id @default(cuid())
+  userId      String
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  examCategory ExamCategory
+  testName    String?                         // optional name/label
+  score       Float
+  totalMarks  Float
+  takenAt     DateTime     @default(now())
+  durationMin Int?                            // test duration in minutes
+
+  createdAt   DateTime     @default(now())
+
+  @@index([userId, examCategory])
+  @@index([userId, takenAt])
+}
+
+// -----------------------------------------------------------------------------
+// VideoProgress — per-user video watch state (feature 7)
+// -----------------------------------------------------------------------------
+model VideoProgress {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  videoId      String
+  video        Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  watchedSecs  Int      @default(0)
+  isCompleted  Boolean  @default(false)
+  completedAt  DateTime?
+
+  updatedAt    DateTime @updatedAt
+
+  @@unique([userId, videoId])
+  @@index([userId])
+}
+
+// -----------------------------------------------------------------------------
+// ResourceCompletion — per-user resource read/done state (feature 6)
+// -----------------------------------------------------------------------------
+model ResourceCompletion {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resourceId   String
+  resource     Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  completedAt  DateTime @default(now())
+
+  @@unique([userId, resourceId])
+  @@index([userId])
+}
+
+// -----------------------------------------------------------------------------
+// AIRoadmap — AI-generated month-wise roadmap cached per user+branch+exam (feature 10)
+// -----------------------------------------------------------------------------
+model AIRoadmap {
+  id          String      @id @default(cuid())
+  userId      String
+  branch      Branch
+  targetExam  ExamCategory
+  currentYear Int
+  content     Json        // { months: [{ month: string, topics: string[] }] }
+  createdAt   DateTime    @default(now())
+
+  @@index([userId])
+  @@unique([userId, branch, targetExam])
+}

@@ -1,0 +1,76 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ---------------------------------------------------------------------------
+   Design tokens — light mode (default) and dark mode.
+   Dark mode is a deliberate second palette, not an inverted-opacity hack:
+   the surface goes near-black-navy (not pure black) and ink goes warm
+   off-white, so the blue primary keeps the same perceived saturation in
+   both modes. See docs/01-architecture.md §1.9.
+--------------------------------------------------------------------------- */
+
+@layer base {
+  :root {
+    --primary: 224 76% 48%;          /* #1D4ED8 exam-form blue */
+    --primary-dark: 226 71% 33%;     /* #1E3A8A */
+    --primary-foreground: 0 0% 100%;
+    --accent: 38 92% 50%;            /* #F59E0B amber, used sparingly */
+    --accent-foreground: 26 83% 14%;
+    --surface: 0 0% 100%;
+    --card: 220 33% 98%;
+    --ink: 222 47% 11%;
+    --ink-muted: 215 16% 47%;
+    --border: 220 13% 91%;
+    --muted: 220 14% 96%;
+    --ring: 224 76% 48%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+  }
+
+  .dark {
+    --primary: 217 91% 60%;          /* slightly brighter on dark for contrast */
+    --primary-dark: 224 76% 48%;
+    --primary-foreground: 222 47% 11%;
+    --accent: 38 92% 55%;
+    --accent-foreground: 26 83% 10%;
+    --surface: 222 47% 7%;           /* #0B1220 near-black navy, not pure black */
+    --card: 222 39% 11%;
+    --ink: 210 40% 96%;
+    --ink-muted: 215 16% 65%;
+    --border: 217 33% 20%;
+    --muted: 217 33% 15%;
+    --ring: 217 91% 60%;
+    --destructive: 0 63% 50%;
+    --destructive-foreground: 0 0% 100%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-surface text-ink font-body antialiased;
+  }
+
+  h1, h2, h3, h4 {
+    @apply font-display;
+  }
+
+  /* tabular numerals everywhere a score/date/count appears */
+  .stat-number {
+    @apply font-mono tabular-nums;
+  }
+}
+
+@layer utilities {
+  /* hides scrollbar for horizontally-scrolling chip rows (filters, tabs)
+     while keeping them scrollable/swipeable on mobile */
+  .scrollbar-none {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+}
