@@ -82,32 +82,45 @@ enum ProgressContentType {
 // -----------------------------------------------------------------------------
 // User
 // -----------------------------------------------------------------------------
-
 model User {
-  id           String   @id @default(cuid())
-  firebaseUid  String   @unique
-  email        String   @unique
-  name         String?
-  avatarUrl    String?
-  role         Role     @default(STUDENT)
+  id          String  @id @default(cuid())
+  firebaseUid String  @unique
+  email       String  @unique
+  name        String?
+  avatarUrl   String?
+  role        Role    @default(STUDENT)
 
-  // Onboarding state
-  branch       Branch?
-  year         Int? // 1-4
-  goals        ExamCategory[] // multi-select: a student can target GATE + Placements at once
-  onboardedAt  DateTime?
+  // onboarding
+  branch      Branch?
+  year        Int?
+  goals       ExamCategory[]
+  onboardedAt DateTime?
 
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  progress             UserProgress[]
-  savedItems           SavedItem[]
-  studyLogs            StudyLog[]
-  usergoals                Goal[]
-  mockTests            MockTest[]
-  pinnedCountdowns     PinnedCountdown[]
-  videoProgress        VideoProgress[]
-  resourceCompletions  ResourceCompletion[]
+  // existing
+  progress            UserProgress[]
+  savedItems          SavedItem[]
+  studyLogs           StudyLog[]
+  usergoals           Goal[]
+  mockTests           MockTest[]
+  pinnedCountdowns    PinnedCountdown[]
+  videoProgress       VideoProgress[]
+  resourceCompletions ResourceCompletion[]
+
+  // 🚀 PHASE 2 (PLACEMENT SYSTEM)
+  placementProfile      PlacementProfile?
+  placementApplications PlacementApplication[]
+
+  internshipApplications  InternshipApplication[]
+  scholarshipApplications ScholarshipApplication[]
+
+  resume        Resume?
+  notifications Notification[]
+  achievements  Achievement[]
+
+  collegePredictors CollegePredictor[]
 
   @@index([role])
 }
@@ -117,41 +130,41 @@ model User {
 // -----------------------------------------------------------------------------
 
 model Exam {
-  id            String       @id @default(cuid())
-  slug          String       @unique // e.g. "gate-cse", "cat", "placements"
-  title         String // "GATE — Computer Science"
-  shortTitle    String // "GATE CSE", used in chips/cards
-  category      ExamCategory
-  branch        Branch? // null = branch-agnostic (e.g. CAT, Placements)
-  isActive      Boolean      @default(true)
+  id         String       @id @default(cuid())
+  slug       String       @unique // e.g. "gate-cse", "cat", "placements"
+  title      String // "GATE — Computer Science"
+  shortTitle String // "GATE CSE", used in chips/cards
+  category   ExamCategory
+  branch     Branch? // null = branch-agnostic (e.g. CAT, Placements)
+  isActive   Boolean      @default(true)
 
   // Content shell — shared across every track
-  overview      String       @db.Text
-  eligibility   String       @db.Text
-  examPattern   String       @db.Text
-  syllabus      String       @db.Text
+  overview    String @db.Text
+  eligibility String @db.Text
+  examPattern String @db.Text
+  syllabus    String @db.Text
 
   // Track-specific shape, validated by a category-keyed Zod discriminated
   // union at the API boundary (lib/validations/exam.ts). See docs/02 §2.3.
-  metadata      Json         @default("{}")
+  metadata Json @default("{}")
 
-  examDate      DateTime? // next upcoming sitting, drives "Upcoming Exams"
+  examDate            DateTime? // next upcoming sitting, drives "Upcoming Exams"
   applicationDeadline DateTime?
 
   coverImageUrl String?
 
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  resources     Resource[]
-  pyqs          PYQ[]
-  videos        Video[]
-  cutoffs       Cutoff[]
-  faqs          FAQ[]
-  roadmaps      Roadmap[]
-  companies     ExamCompany[]
-  progress      UserProgress[]
-  savedItems    SavedItem[]
+  resources  Resource[]
+  pyqs       PYQ[]
+  videos     Video[]
+  cutoffs    Cutoff[]
+  faqs       FAQ[]
+  roadmaps   Roadmap[]
+  companies  ExamCompany[]
+  progress   UserProgress[]
+  savedItems SavedItem[]
 
   @@index([category])
   @@index([branch])
@@ -159,9 +172,9 @@ model Exam {
 }
 
 model Cutoff {
-  id       String  @id @default(cuid())
+  id       String @id @default(cuid())
   examId   String
-  exam     Exam    @relation(fields: [examId], references: [id], onDelete: Cascade)
+  exam     Exam   @relation(fields: [examId], references: [id], onDelete: Cascade)
   year     Int
   category String // e.g. "General", "OBC-NCL", "SC", "ST" or a branch/role label
   value    Float // score / rank / percentile depending on exam category
@@ -187,56 +200,56 @@ model FAQ {
 // -----------------------------------------------------------------------------
 
 model Resource {
-  id          String        @id @default(cuid())
+  id          String       @id @default(cuid())
   title       String
-  description String?       @db.Text
+  description String?      @db.Text
   type        ResourceType
   fileUrl     String // Cloudinary / S3 URL
   fileType    String? // "pdf", "docx", "png"...
   sizeBytes   Int?
 
-  examId      String
-  exam        Exam          @relation(fields: [examId], references: [id], onDelete: Cascade)
-  branch      Branch?
-  subject     String // free text subject tag, e.g. "Operating Systems"
+  examId  String
+  exam    Exam    @relation(fields: [examId], references: [id], onDelete: Cascade)
+  branch  Branch?
+  subject String // free text subject tag, e.g. "Operating Systems"
 
   uploadedById String?
-  saveCount    Int          @default(0)
-  viewCount    Int          @default(0)
+  saveCount    Int     @default(0)
+  viewCount    Int     @default(0)
 
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  progress             UserProgress[]
-  savedItems           SavedItem[]
-  resourceCompletions  ResourceCompletion[]
+  progress            UserProgress[]
+  savedItems          SavedItem[]
+  resourceCompletions ResourceCompletion[]
 
   @@index([examId, branch, subject, type])
 }
 
 model PYQ {
-  id           String   @id @default(cuid())
-  examId       String
-  exam         Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
-  year         Int
-  session      String? // "Slot 1", "Forenoon", null if N/A
-  subject      String?
-  questionUrl  String // PDF of the question paper
-  solutionUrl  String? // optional solution PDF
-  hasSolution  Boolean  @default(false)
+  id          String  @id @default(cuid())
+  examId      String
+  exam        Exam    @relation(fields: [examId], references: [id], onDelete: Cascade)
+  year        Int
+  session     String? // "Slot 1", "Forenoon", null if N/A
+  subject     String?
+  questionUrl String // PDF of the question paper
+  solutionUrl String? // optional solution PDF
+  hasSolution Boolean @default(false)
 
-  createdAt    DateTime @default(now())
+  createdAt DateTime @default(now())
 
-  progress     UserProgress[]
-  savedItems   SavedItem[]
+  progress   UserProgress[]
+  savedItems SavedItem[]
 
   @@index([examId, year])
 }
 
 model Video {
-  id              String   @id @default(cuid())
+  id              String  @id @default(cuid())
   examId          String
-  exam            Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
+  exam            Exam    @relation(fields: [examId], references: [id], onDelete: Cascade)
   title           String
   youtubeId       String // e.g. "dQw4w9WgXcQ"
   channel         String
@@ -244,10 +257,10 @@ model Video {
   durationSeconds Int?
   thumbnailUrl    String?
 
-  createdAt       DateTime @default(now())
+  createdAt DateTime @default(now())
 
-  progress        UserProgress[]
-  videoProgress   VideoProgress[]
+  progress      UserProgress[]
+  videoProgress VideoProgress[]
 
   @@index([examId, subject])
 }
@@ -257,24 +270,25 @@ model Video {
 // -----------------------------------------------------------------------------
 
 model Company {
-  id            String        @id @default(cuid())
-  slug          String        @unique
-  name          String
-  logoUrl       String?
-  companyType   CompanyType
-  description   String?       @db.Text
-  website       String?
+  id          String      @id @default(cuid())
+  slug        String      @unique
+  name        String
+  logoUrl     String?
+  companyType CompanyType
+  description String?     @db.Text
+  website     String?
 
   // Placement-specific
   avgPackageLpa Float?
   rolesHiredFor String[]
 
   // PSU-specific
-  recruitsViaGate Boolean?    @default(false)
+  recruitsViaGate Boolean? @default(false)
 
-  exams         ExamCompany[]
+  exams ExamCompany[]
 
-  createdAt     DateTime      @default(now())
+  createdAt            DateTime               @default(now())
+  PlacementApplication PlacementApplication[]
 
   @@index([companyType])
 }
@@ -295,29 +309,29 @@ model ExamCompany {
 // -----------------------------------------------------------------------------
 
 model Roadmap {
-  id          String        @id @default(cuid())
+  id          String  @id @default(cuid())
   examId      String
-  exam        Exam          @relation(fields: [examId], references: [id], onDelete: Cascade)
-  title        String // "GATE CSE — 12 Month Plan", "DSA Roadmap"
-  description  String?       @db.Text
+  exam        Exam    @relation(fields: [examId], references: [id], onDelete: Cascade)
+  title       String // "GATE CSE — 12 Month Plan", "DSA Roadmap"
+  description String? @db.Text
 
-  steps        RoadmapStep[]
+  steps RoadmapStep[]
 
-  createdAt    DateTime      @default(now())
+  createdAt DateTime @default(now())
 
   @@index([examId])
 }
 
 model RoadmapStep {
-  id          String   @id @default(cuid())
+  id          String  @id @default(cuid())
   roadmapId   String
-  roadmap     Roadmap  @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
+  roadmap     Roadmap @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
   order       Int
   title       String
-  description String?  @db.Text
+  description String? @db.Text
   resourceUrl String? // optional deep link to a relevant resource
 
-  progress    UserProgress[]
+  progress UserProgress[]
 
   @@index([roadmapId, order])
 }
@@ -331,37 +345,37 @@ model RoadmapStep {
 // Enforced at the application layer (Zod refinement in services/progressService.ts)
 // since Postgres/Prisma don't support a clean native XOR constraint here.
 model UserProgress {
-  id            String              @id @default(cuid())
-  userId        String
-  user          User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  contentType   ProgressContentType
-  status        ProgressStatus      @default(VIEWED)
+  contentType ProgressContentType
+  status      ProgressStatus      @default(VIEWED)
 
   examId        String?
-  exam          Exam?               @relation(fields: [examId], references: [id], onDelete: SetNull)
+  exam          Exam?        @relation(fields: [examId], references: [id], onDelete: SetNull)
   resourceId    String?
-  resource      Resource?           @relation(fields: [resourceId], references: [id], onDelete: SetNull)
+  resource      Resource?    @relation(fields: [resourceId], references: [id], onDelete: SetNull)
   pyqId         String?
-  pyq           PYQ?                @relation(fields: [pyqId], references: [id], onDelete: SetNull)
+  pyq           PYQ?         @relation(fields: [pyqId], references: [id], onDelete: SetNull)
   videoId       String?
-  video         Video?              @relation(fields: [videoId], references: [id], onDelete: SetNull)
+  video         Video?       @relation(fields: [videoId], references: [id], onDelete: SetNull)
   roadmapStepId String?
-  roadmapStep   RoadmapStep?        @relation(fields: [roadmapStepId], references: [id], onDelete: SetNull)
+  roadmapStep   RoadmapStep? @relation(fields: [roadmapStepId], references: [id], onDelete: SetNull)
 
-  lastViewedAt  DateTime            @default(now())
-  createdAt     DateTime            @default(now())
+  lastViewedAt DateTime @default(now())
+  createdAt    DateTime @default(now())
   // Video progress — seconds watched; only meaningful when contentType = VIDEO
-  watchSeconds  Int                 @default(0)
+  watchSeconds Int      @default(0)
 
   @@index([userId, lastViewedAt])
   @@index([userId, contentType])
 }
 
 model SavedItem {
-  id         String    @id @default(cuid())
-  userId     String
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   examId     String?
   exam       Exam?     @relation(fields: [examId], references: [id], onDelete: Cascade)
@@ -370,7 +384,7 @@ model SavedItem {
   pyqId      String?
   pyq        PYQ?      @relation(fields: [pyqId], references: [id], onDelete: Cascade)
 
-  createdAt  DateTime  @default(now())
+  createdAt DateTime @default(now())
 
   @@index([userId])
 }
@@ -384,17 +398,17 @@ model SavedItem {
 // One row per session. Multiple sessions per day are fine and summed.
 // -----------------------------------------------------------------------------
 model StudyLog {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  date        DateTime @db.Date          // local date, stored UTC midnight
-  topic       String
-  subject     String
-  minutes     Int      // positive, validated at API boundary
-  notes       String?  @db.Text
-  examCategory ExamCategory?            // optional tag so subject-wise breakdown works
+  id           String        @id @default(cuid())
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date         DateTime      @db.Date // local date, stored UTC midnight
+  topic        String
+  subject      String
+  minutes      Int // positive, validated at API boundary
+  notes        String?       @db.Text
+  examCategory ExamCategory? // optional tag so subject-wise breakdown works
 
-  createdAt   DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@index([userId, date])
   @@index([userId, examCategory])
@@ -405,18 +419,18 @@ model StudyLog {
 // Visible to all students without auth; students can pin ones to their dashboard.
 // -----------------------------------------------------------------------------
 model ExamCountdown {
-  id          String       @id @default(cuid())
-  title       String                          // "GATE 2026"
+  id          String        @id @default(cuid())
+  title       String // "GATE 2026"
   examDate    DateTime
   category    ExamCategory?
   description String?
-  isActive    Boolean      @default(true)
-  isPinnable  Boolean      @default(true)
+  isActive    Boolean       @default(true)
+  isPinnable  Boolean       @default(true)
 
-  pinnedBy    PinnedCountdown[]
+  pinnedBy PinnedCountdown[]
 
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([examDate])
 }
@@ -435,22 +449,22 @@ model PinnedCountdown {
 // Goal — student-defined goals with progress (0–100%)
 // -----------------------------------------------------------------------------
 model Goal {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title       String                          // "Complete DSA", "Solve 500 Questions"
-  description String?
-  targetValue Int      @default(100)          // 100 = percentage; can represent question count
-  currentValue Int     @default(0)
-  unit        String   @default("percent")    // "percent" | "questions" | "chapters" etc.
-  deadline    DateTime?
-  isCompleted Boolean  @default(false)
-  completedAt DateTime?
+  id           String    @id @default(cuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title        String // "Complete DSA", "Solve 500 Questions"
+  description  String?
+  targetValue  Int       @default(100) // 100 = percentage; can represent question count
+  currentValue Int       @default(0)
+  unit         String    @default("percent") // "percent" | "questions" | "chapters" etc.
+  deadline     DateTime?
+  isCompleted  Boolean   @default(false)
+  completedAt  DateTime?
 
   examCategory ExamCategory?
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId, isCompleted])
 }
@@ -459,17 +473,17 @@ model Goal {
 // MockTest — student-recorded test results for score tracking + Recharts graphs
 // -----------------------------------------------------------------------------
 model MockTest {
-  id          String       @id @default(cuid())
-  userId      String
-  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id           String       @id @default(cuid())
+  userId       String
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   examCategory ExamCategory
-  testName    String?                         // optional name/label
-  score       Float
-  totalMarks  Float
-  takenAt     DateTime     @default(now())
-  durationMin Int?                            // test duration in minutes
+  testName     String? // optional name/label
+  score        Float
+  totalMarks   Float
+  takenAt      DateTime     @default(now())
+  durationMin  Int? // test duration in minutes
 
-  createdAt   DateTime     @default(now())
+  createdAt DateTime @default(now())
 
   @@index([userId, examCategory])
   @@index([userId, takenAt])
@@ -479,16 +493,16 @@ model MockTest {
 // VideoProgress — per-user video watch state (feature 7)
 // -----------------------------------------------------------------------------
 model VideoProgress {
-  id           String   @id @default(cuid())
-  userId       String
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  videoId      String
-  video        Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
-  watchedSecs  Int      @default(0)
-  isCompleted  Boolean  @default(false)
-  completedAt  DateTime?
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  videoId     String
+  video       Video     @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  watchedSecs Int       @default(0)
+  isCompleted Boolean   @default(false)
+  completedAt DateTime?
 
-  updatedAt    DateTime @updatedAt
+  updatedAt DateTime @updatedAt
 
   @@unique([userId, videoId])
   @@index([userId])
@@ -498,12 +512,12 @@ model VideoProgress {
 // ResourceCompletion — per-user resource read/done state (feature 6)
 // -----------------------------------------------------------------------------
 model ResourceCompletion {
-  id           String   @id @default(cuid())
-  userId       String
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  resourceId   String
-  resource     Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
-  completedAt  DateTime @default(now())
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resourceId  String
+  resource    Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  completedAt DateTime @default(now())
 
   @@unique([userId, resourceId])
   @@index([userId])
@@ -513,14 +527,154 @@ model ResourceCompletion {
 // AIRoadmap — AI-generated month-wise roadmap cached per user+branch+exam (feature 10)
 // -----------------------------------------------------------------------------
 model AIRoadmap {
-  id          String      @id @default(cuid())
+  id          String       @id @default(cuid())
   userId      String
   branch      Branch
   targetExam  ExamCategory
   currentYear Int
-  content     Json        // { months: [{ month: string, topics: string[] }] }
-  createdAt   DateTime    @default(now())
+  content     Json // { months: [{ month: string, topics: string[] }] }
+  createdAt   DateTime     @default(now())
+
+  @@unique([userId, branch, targetExam])
+  @@index([userId])
+}
+
+model PlacementProfile {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  resumeUrl String?
+  skills    String[]
+  cgpa      Float?
+  branch    Branch?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PlacementApplication {
+  id        String   @id @default(cuid())
+  userId    String
+  companyId String
+  role      String
+  status    String   @default("APPLIED") // APPLIED, SHORTLISTED, REJECTED, SELECTED
+  appliedAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@index([userId])
-  @@unique([userId, branch, targetExam])
+  @@index([companyId])
+}
+
+model Internship {
+  id          String  @id @default(cuid())
+  title       String
+  company     String
+  description String? @db.Text
+  stipend     String?
+  duration    String?
+  applyLink   String
+
+  location String?
+  isRemote Boolean @default(false)
+
+  createdAt DateTime @default(now())
+}
+
+model InternshipApplication {
+  id           String @id @default(cuid())
+  userId       String
+  internshipId String
+  status       String @default("APPLIED")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  appliedAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Scholarship {
+  id          String  @id @default(cuid())
+  title       String
+  provider    String
+  description String? @db.Text
+  amount      String?
+  applyLink   String
+
+  deadline  DateTime?
+  createdAt DateTime  @default(now())
+}
+
+model ScholarshipApplication {
+  id            String @id @default(cuid())
+  userId        String
+  scholarshipId String
+  status        String @default("APPLIED")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  appliedAt DateTime @default(now())
+}
+
+model Resume {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  data   Json // full resume structure (sections, experience, skills)
+  pdfUrl String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Notification {
+  id     String @id @default(cuid())
+  userId String
+
+  title   String
+  message String
+  type    String // INFO, WARNING, SUCCESS
+
+  isRead Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+}
+
+model Achievement {
+  id     String @id @default(cuid())
+  userId String
+
+  title  String
+  badge  String
+  points Int    @default(0)
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model CollegePredictor {
+  id     String @id @default(cuid())
+  userId String
+
+  rank     Int
+  category String
+  branch   Branch
+
+  predictions Json // list of predicted colleges
+
+  createdAt DateTime @default(now())
+  User      User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
 }
