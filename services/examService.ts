@@ -82,3 +82,67 @@ export async function getUpcomingExams(limit = 5) {
     select: { id: true, slug: true, shortTitle: true, examDate: true },
   });
 }
+
+/* ─────────────────────────────────────────────
+   ADMIN SERVICES
+───────────────────────────────────────────── */
+
+export async function listAdminExams() {
+  return prisma.exam.findMany({
+    orderBy: { title: "asc" },
+    select: {
+      id: true,
+      slug: true,
+      title: true,
+      shortTitle: true,
+      category: true,
+      branch: true,
+      isActive: true,
+      examDate: true,
+    },
+  });
+}
+
+export async function getAdminExam(id: string) {
+  return prisma.exam.findUnique({
+    where: { id },
+    include: {
+      faqs: {
+        orderBy: {
+          order: "asc",
+        },
+      },
+      cutoffs: {
+        orderBy: {
+          year: "desc",
+        },
+      },
+      pyqs: {
+        orderBy: {
+          year: "desc",
+        },
+      },
+      videos: true,
+      resources: true,
+    },
+  });
+}
+
+export async function updateExam(
+  id: string,
+  data: {
+    title?: string;
+    shortTitle?: string;
+    overview?: string;
+    eligibility?: string;
+    examPattern?: string;
+    syllabus?: string;
+    examDate?: Date | null;
+    applicationDeadline?: Date | null;
+  }
+) {
+  return prisma.exam.update({
+    where: { id },
+    data,
+  });
+}

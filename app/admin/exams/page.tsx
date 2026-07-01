@@ -1,60 +1,160 @@
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { ExamForm } from "@/components/admin/ExamForm";
 import { ExamRowActions } from "@/components/admin/ExamRowActions";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminExamsPage() {
   const exams = await prisma.exam.findMany({
-    orderBy: { createdAt: "desc" },
-    select: { id: true, slug: true, title: true, category: true, isActive: true, _count: { select: { resources: true, pyqs: true } } },
+    orderBy: {
+      createdAt: "desc",
+    },
+    select: {
+      id: true,
+      slug: true,
+      title: true,
+      category: true,
+      isActive: true,
+      _count: {
+        select: {
+          resources: true,
+          pyqs: true,
+          videos: true,
+          faqs: true,
+          cutoffs: true,
+        },
+      },
+    },
   });
 
   return (
-    <div>
+    <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="font-display text-xl font-semibold">Exams</h1>
+        <div>
+          <h1 className="text-2xl font-bold">
+            Exam Management
+          </h1>
+
+          <p className="text-sm text-muted-foreground">
+            Manage all exams and their content
+          </p>
+        </div>
+
         <ExamForm />
       </div>
 
-      <div className="mt-6 overflow-x-auto rounded-lg border border-border">
+      {/* Table */}
+      <div className="overflow-hidden rounded-lg border">
         <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border bg-card text-left text-ink-muted">
-              <th className="px-4 py-2 font-medium">Slug</th>
-              <th className="px-4 py-2 font-medium">Category</th>
-              <th className="px-4 py-2 font-medium">Content</th>
-              <th className="px-4 py-2 font-medium">Status</th>
-              <th className="px-4 py-2" />
+          <thead className="bg-muted/50">
+            <tr>
+              <th className="px-4 py-3 text-left">
+                Exam
+              </th>
+
+              <th className="px-4 py-3 text-left">
+                Category
+              </th>
+
+              <th className="px-4 py-3 text-left">
+                Resources
+              </th>
+
+              <th className="px-4 py-3 text-left">
+                Status
+              </th>
+
+              <th className="px-4 py-3 text-right">
+                Actions
+              </th>
             </tr>
           </thead>
+
           <tbody>
             {exams.map((exam) => (
-              <tr key={exam.id} className="border-b border-border/60 last:border-0">
-                <td className="px-4 py-2.5">
-                  <p className="font-medium">{exam.title}</p>
-                  <p className="stat-number text-xs text-ink-muted">{exam.slug}</p>
+              <tr
+                key={exam.id}
+                className="border-t transition hover:bg-muted/30"
+              >
+                {/* Exam */}
+                <td className="px-4 py-4">
+                  <div>
+                    <p className="font-medium">
+                      {exam.title}
+                    </p>
+
+                    <p className="text-xs text-muted-foreground">
+                      {exam.slug}
+                    </p>
+                  </div>
                 </td>
-                <td className="px-4 py-2.5">
-                  <Badge variant="outline">{exam.category}</Badge>
+
+                {/* Category */}
+                <td className="px-4 py-4">
+                  <Badge variant="outline">
+                    {exam.category}
+                  </Badge>
                 </td>
-                <td className="stat-number px-4 py-2.5 text-xs text-ink-muted">
-                  {exam._count.resources} res · {exam._count.pyqs} pyq
+
+                {/* Content Count */}
+                <td className="px-4 py-4">
+                  <div className="space-y-1 text-xs text-muted-foreground">
+                    <div>📄 Resources : {exam._count.resources}</div>
+                    <div>📘 PYQs : {exam._count.pyqs}</div>
+                    <div>🎥 Videos : {exam._count.videos}</div>
+                    <div>❓ FAQs : {exam._count.faqs}</div>
+                    <div>📊 Cutoffs : {exam._count.cutoffs}</div>
+                  </div>
                 </td>
-                <td className="px-4 py-2.5">
-                  <span className={`inline-block h-2 w-2 rounded-full ${exam.isActive ? "bg-primary" : "bg-muted"}`} />
-                  <span className="ml-1.5 text-xs text-ink-muted">{exam.isActive ? "Active" : "Inactive"}</span>
+
+                {/* Status */}
+                <td className="px-4 py-4">
+                  <Badge
+                    variant={
+                      exam.isActive
+                        ? "default"
+                        : "muted"
+                    }
+                  >
+                    {exam.isActive
+                      ? "Active"
+                      : "Inactive"}
+                  </Badge>
                 </td>
-                <td className="px-4 py-2.5 text-right">
-                  <ExamRowActions slug={exam.slug} isActive={exam.isActive} />
+
+                {/* Actions */}
+                <td className="px-4 py-4">
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      asChild
+                      size="sm"
+                      variant="outline"
+                    >
+                      <Link href={`/admin/exams/${exam.id}`}>
+                        Manage
+                      </Link>
+                    </Button>
+
+                    <ExamRowActions
+                      slug={exam.slug}
+                      isActive={exam.isActive}
+                    />
+                  </div>
                 </td>
               </tr>
             ))}
+
             {exams.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-ink-muted">
-                  No exams yet — create the first one.
+                <td
+                  colSpan={5}
+                  className="py-12 text-center text-muted-foreground"
+                >
+                  No exams found.
                 </td>
               </tr>
             )}

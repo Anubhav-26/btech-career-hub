@@ -116,7 +116,7 @@ export function AIRoadmapGenerator({ initialRoadmap, userBranch, userYear }: {
                 <span className="flex items-center gap-2"><Sparkles className="h-4 w-4" /> Generate roadmap</span>
               )}
             </Button>
-            <p className="text-center text-xs text-ink-muted">Powered by OpenRouter AI</p>
+            <p className="text-center text-xs text-ink-muted">Powered by: B.Tech-Career Hub</p>
           </form>
         ) : roadmap ? (
           <div className="space-y-2">

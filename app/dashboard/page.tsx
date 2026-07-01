@@ -12,9 +12,15 @@ import { RecentlyViewed } from "@/components/dashboard/RecentlyViewed";
 import { UpcomingExams } from "@/components/dashboard/UpcomingExams";
 
 // Phase 1 services
-import { getStudyHeatmapData, computeStreaks, getStudyStats } from "@/services/phase1/studyService";
+import {
+  getStudyHeatmapData,
+  computeStreaks,
+  getStudyStats,
+} from "@/services/phase1/studyService";
+
 import { getUserGoals } from "@/services/phase1/goalService";
 import { getMockTestAnalytics } from "@/services/phase1/mockTestService";
+
 import {
   getActiveCountdowns,
   getUserPinnedCountdowns,
@@ -37,6 +43,15 @@ import { LeaderboardWidget } from "@/components/features/Leaderboard";
 import { SmartReminders, computeReminders } from "@/components/features/SmartReminders";
 import { AIRoadmapGenerator } from "@/components/features/AIRoadmapGenerator";
 
+// ✅ Phase 2
+import {
+  getUserXPAndAchievements,
+  getUnreadNotifications,
+  getPlacementStats,
+} from "@/services/phase2";
+
+import { XPLevelWidget, NotificationBell } from "@/components/phase2/XPWidget";
+
 export const metadata: Metadata = { title: "Dashboard" };
 export const dynamic = "force-dynamic";
 
@@ -58,6 +73,11 @@ export default async function DashboardPage() {
     continueWatching,
     leaderboard,
     cachedRoadmap,
+
+    // Phase 2
+    xpData,
+    unreadNotifs,
+    placementStats,
   ] = await Promise.all([
     getDashboardPayload(user.id),
     getStudyHeatmapData(user.id, 365),
@@ -71,16 +91,16 @@ export default async function DashboardPage() {
     getContinueWatching(user.id, 3),
     getLeaderboard(10),
     getCachedAIRoadmap(user.id, user.branch ?? "CSE", user.goals?.[0] ?? "GATE"),
+
+    // Phase 2
+    getUserXPAndAchievements(user.id),
+    getUnreadNotifications(user.id),
+    getPlacementStats(user.id),
   ]);
 
   const streaks = computeStreaks(heatmapData);
-
-  // ✅ SAFE NAME LOGIC (NO ERROR POSSIBLE)
   const firstName =
-    (user?.name || "")
-      .trim()
-      .split(" ")[0] ||
-    "User";
+    (user?.name || "").trim().split(" ")[0] || "User";
 
   const pinnedIds = pinnedCountdowns?.map((c) => c.id) ?? [];
 
@@ -113,7 +133,6 @@ export default async function DashboardPage() {
       <div className="mb-4 flex items-start justify-between">
         <div>
           <h1 className="font-display text-xl font-semibold">
-        
             Hi {firstName} 👋
           </h1>
 
@@ -127,6 +146,13 @@ export default async function DashboardPage() {
         </div>
 
         <LogStudyButton />
+      </div>
+
+      {/* ✅ Phase 2 Top Bar */}
+      <div className="mb-4 flex flex-wrap gap-3">
+        {unreadNotifs.length > 0 && (
+          <NotificationBell unreadCount={unreadNotifs.length} />
+        )}
       </div>
 
       {/* SMART REMINDERS */}
@@ -148,6 +174,18 @@ export default async function DashboardPage() {
             weekMinutes={studyStats.weekMinutes}
             monthMinutes={studyStats.monthMinutes}
             subjectBreakdown={studyStats.subjectBreakdown}
+          />
+
+          {/* ✅ XP Widget (IMPORTANT - MOTIVATION BLOCK) */}
+          <XPLevelWidget
+            xp={{
+              totalXP: xpData.totalXP,
+              level: xpData.level,
+              progress: xpData.progress,
+              nextLevelXP: xpData.nextLevelXP,
+              currentLevelXP: xpData.currentLevelXP,
+              achievements: xpData.achievements,
+            }}
           />
 
           <GoalTracker
@@ -181,6 +219,7 @@ export default async function DashboardPage() {
               userYear={user.year ?? undefined}
             />
           </div>
+
           <AskAIMentor />
         </div>
 
@@ -220,6 +259,8 @@ export default async function DashboardPage() {
                 : null,
             }))}
           />
+
+          {/* (Optional later: Placement Widget UI) */}
 
           <div className="hidden md:block">
             <AIRoadmapGenerator

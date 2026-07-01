@@ -1,8 +1,12 @@
 import { PrismaClient } from "@prisma/client";
 
+
 const prisma = new PrismaClient();
 
+
 async function main() {
+
+  await prisma.fAQ.deleteMany();
   // ---------------------------------------------------------------------
   // GATE CSE
   // ---------------------------------------------------------------------
@@ -34,16 +38,15 @@ async function main() {
           { year: 2025, category: "General", value: 29.2, unit: "score" },
         ],
       },
-      faqs: {
+     faqs: {
         create: [
-          { order: 1, question: "Can a 3rd year student appear for GATE?", answer: "No — GATE is open to final-year students and graduates only, since it certifies completion of a qualifying degree." },
+          { order: 1, question: "Can a 3rd year student appear for GATE?", answer: "Yes — final-year students of B.Tech/B.E. in CSE/IT or related disciplines are eligible to appear for GATE CSE." },
           { order: 2, question: "Is GATE CSE useful without an M.Tech plan?", answer: "Yes — many PSUs (BHEL, IOCL, ONGC, NTPC) hire directly through GATE CSE scores without requiring an M.Tech." },
         ],
       },
     },
   });
-
-  // ---------------------------------------------------------------------
+  //        ---------------------------------------------------------------------
   // PSU (general track, branch-agnostic)
   // ---------------------------------------------------------------------
   await prisma.exam.upsert({
@@ -257,6 +260,7 @@ async function main() {
   // ── Phase 1 Seed Data ──────────────────────────────────────────────────────
 
   // Exam Countdowns (admin-created, visible to all)
+  await prisma.examCountdown.deleteMany();
   await prisma.examCountdown.createMany({
     data: [
       { title: "GATE 2027", examDate: new Date("2027-02-07"), category: "GATE", description: "Graduate Aptitude Test in Engineering", isActive: true, isPinnable: true },

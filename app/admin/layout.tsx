@@ -1,38 +1,49 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
-import { LayoutDashboard, GraduationCap, FolderOpen, Users } from "lucide-react";
 import { getServerUser } from "@/lib/auth";
+import { SidebarNav } from "@/components/admin/SidebarNav";
 
-const NAV = [
-  { href: "/admin", label: "Overview", icon: LayoutDashboard },
-  { href: "/admin/exams", label: "Exams", icon: GraduationCap },
-  { href: "/admin/resources", label: "Resources", icon: FolderOpen },
-  { href: "/admin/users", label: "Users", icon: Users },
-];
-
-export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+export default async function AdminLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const user = await getServerUser();
+
+  // 🔒 AUTH CHECK
   if (!user) redirect("/login?next=/admin");
+
+  // 🔒 ROLE CHECK
   if (user.role !== "ADMIN") redirect("/dashboard");
 
   return (
-    <div className="container grid gap-6 py-6 md:grid-cols-[180px_1fr] md:py-8">
-      <aside>
-        <p className="mb-3 px-2 text-xs font-medium uppercase tracking-wide text-ink-muted">Admin</p>
-        <nav className="flex gap-1 overflow-x-auto scrollbar-none md:flex-col md:overflow-visible">
-          {NAV.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="flex shrink-0 items-center gap-2 rounded-md px-2 py-2 text-sm font-medium text-ink-muted hover:bg-muted hover:text-ink"
-            >
-              <item.icon className="h-4 w-4" />
-              {item.label}
-            </Link>
-          ))}
-        </nav>
-      </aside>
-      <div className="min-w-0">{children}</div>
+    <div className="min-h-screen bg-background">
+
+      <div className="container grid gap-6 py-6 md:grid-cols-[240px_1fr] md:py-8">
+
+        {/* ───────── SIDEBAR ───────── */}
+        <aside className="h-fit rounded-lg border border-border bg-surface p-4 md:sticky md:top-16">
+
+          {/* HEADER */}
+          <div className="mb-4 border-b border-border pb-3">
+            <h2 className="text-sm font-semibold text-foreground">
+              Admin Panel
+            </h2>
+            <p className="text-xs text-muted-foreground">
+              Manage platform content
+            </p>
+          </div>
+
+          <SidebarNav />
+        </aside>
+
+        {/* ───────── MAIN CONTENT ───────── */}
+        <main className="min-w-0 rounded-lg border border-border bg-surface p-4 md:p-6 shadow-sm">
+
+          {children}
+
+        </main>
+
+      </div>
     </div>
   );
 }
