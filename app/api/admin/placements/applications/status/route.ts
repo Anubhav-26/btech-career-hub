@@ -17,24 +17,23 @@ export async function PATCH(req: Request) {
     // 2. Update application
     const application = await prisma.placementApplication.update({
       where: { id },
+      data: { status },
       include: {
         user: true,
-        company: true,
       },
-      data: { status },
     });
 
     // 3. Extra safety check
-    if (!application.userId || !application.company?.name) {
+    if (!application.userId || !application.companyName) {
       return NextResponse.json(
         { error: "Invalid application data" },
         { status: 400 }
       );
     }
 
-    // 4. Message builder (clean + scalable)
-    const companyName = application.company.name;
+    const companyName = application.companyName;
 
+    // 4. Notification message
     const messageMap: Record<string, string> = {
       SHORTLISTED: `🎉 You are shortlisted for ${companyName}`,
       SELECTED: `🚀 Congratulations! You are selected in ${companyName}`,
@@ -42,25 +41,17 @@ export async function PATCH(req: Request) {
       APPLIED: `📢 Your application is submitted for ${companyName}`,
     };
 
-    const message =
-      messageMap[status] ||
+    const notificationBody =
+      messageMap[status] ??
       `📢 Status updated for ${companyName}`;
 
-    // 5. Type mapping
-    const type =
-      status === "SELECTED"
-        ? "SUCCESS"
-        : status === "REJECTED"
-        ? "WARNING"
-        : "INFO";
-
-    // 6. Create notification
+    // 5. Create notification
     await prisma.notification.create({
       data: {
         userId: application.userId,
         title: "Placement Update",
-        message,
-        type,
+        body: notificationBody,
+        type: "SYSTEM",
       },
     });
 

@@ -10,7 +10,7 @@ export default function AdminPlacementsPage() {
   const [companyFilter, setCompanyFilter] = useState("ALL");
 
   // ✅ STEP 4: RESUME MODAL STATE
-  const [resumeUrl, setResumeUrl] = useState<string | null>(null);
+  
 
   const fetchApps = async () => {
     setLoading(true);
@@ -165,22 +165,9 @@ export default function AdminPlacementsPage() {
 
                   {/* RESUME BUTTON (STEP 4 ADDED HERE) */}
                   <td className="p-2 border">
-                    {app.user?.placementProfile?.resumeUrl ? (
-                      <button
-                        onClick={() =>
-                          setResumeUrl(
-                            app.user.placementProfile.resumeUrl
-                          )
-                        }
-                        className="px-2 py-1 bg-purple-600 text-white text-sm rounded"
-                      >
-                        View Resume
-                      </button>
-                    ) : (
-                      <span className="text-gray-400">
-                        No Resume
-                      </span>
-                    )}
+                   <span className="text-gray-400">
+                     Resume feature unavailable
+                        </span>
                   </td>
 
                   {/* ACTIONS */}
@@ -225,27 +212,7 @@ export default function AdminPlacementsPage() {
         </div>
       )}
 
-      {/* ============================== */}
-      {/* STEP 4: RESUME MODAL */}
-      {/* ============================== */}
-      {resumeUrl && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-          <div className="bg-white w-[90%] h-[90%] rounded-lg relative overflow-hidden">
-
-            <button
-              onClick={() => setResumeUrl(null)}
-              className="absolute top-2 right-2 bg-red-500 text-white px-3 py-1 rounded"
-            >
-              Close
-            </button>
-
-            <iframe
-              src={resumeUrl}
-              className="w-full h-full"
-            />
-          </div>
-        </div>
-      )}
+      
     </div>
   );
 }

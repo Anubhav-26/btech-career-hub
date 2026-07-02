@@ -29,6 +29,23 @@ export async function getPlacementStats(userId: string) {
   return { ...counts, total: apps.length };
 }
 
+export async function getPlacementApplications(userId: string) {
+  return prisma.placementApplication.findMany({
+    where: { userId },
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+    },
+    orderBy: {
+      appliedAt: "desc",
+    },
+  });
+}
 // ─────────────────────────────────────────────
 // 🏢 INTERNSHIPS
 // ─────────────────────────────────────────────

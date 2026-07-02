@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Plus, Pencil, Trash2, Check, Target } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -140,8 +139,9 @@ function GoalFormDialog({ existing, onSave, children }: {
 
 export function GoalTracker({ initialGoals }: { initialGoals: Goal[] }) {
   const [goals, setGoals] = useState(initialGoals);
+  const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const { getIdToken } = useAuth();
-  const router = useRouter();
+  
 
   async function authFetch(path: string, opts: RequestInit) {
     const token = await getIdToken();
@@ -149,21 +149,48 @@ export function GoalTracker({ initialGoals }: { initialGoals: Goal[] }) {
   }
 
   async function createGoal(data: Partial<Goal>) {
-    const res = await authFetch("/api/goals", { method: "POST", body: JSON.stringify(data) });
-    const json = await res.json();
-    if (res.ok) setGoals((prev) => [json.data, ...prev]);
+  const res = await authFetch("/api/goals", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+
+  const json = await res.json();
+
+  if (res.ok) {
+    setGoals((prev) => [json.data, ...prev]);
+  } else {
+    alert(json.error?.message ?? "Failed to create goal");
   }
+}
 
   async function editGoal(id: string, data: Partial<Goal>) {
-    const res = await authFetch(`/api/goals/${id}`, { method: "PATCH", body: JSON.stringify(data) });
-    const json = await res.json();
-    if (res.ok) setGoals((prev) => prev.map((g) => (g.id === id ? json.data : g)));
+  const res = await authFetch(`/api/goals/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+
+  const json = await res.json();
+
+  if (res.ok) {
+    setGoals((prev) =>
+      prev.map((g) => (g.id === id ? json.data : g))
+    );
+  } else {
+    alert(json.error?.message ?? "Failed to update goal");
   }
+}
 
   async function deleteGoal(id: string) {
-    await authFetch(`/api/goals/${id}`, { method: "DELETE" });
+  const res = await authFetch(`/api/goals/${id}`, {
+    method: "DELETE",
+  });
+
+  if (res.ok) {
     setGoals((prev) => prev.filter((g) => g.id !== id));
+  } else {
+    alert("Failed to delete goal.");
   }
+}
 
   async function incrementGoal(id: string, currentValue: number) {
     const res = await authFetch(`/api/goals/${id}`, { method: "PATCH", body: JSON.stringify({ currentValue }) });
@@ -190,22 +217,39 @@ export function GoalTracker({ initialGoals }: { initialGoals: Goal[] }) {
         )}
         {active.map((g) => (
           <GoalBar
-            key={g.id}
-            goal={g}
-            onEdit={(goal) => editGoal(goal.id, goal)}
-            onDelete={deleteGoal}
-            onIncrement={incrementGoal}
-          />
+                  key={g.id}
+                  goal={g}
+                 onEdit={setEditingGoal}
+                 onDelete={deleteGoal}
+                onIncrement={incrementGoal}
+              />
         ))}
         {completed.length > 0 && (
           <>
             <p className="pt-1 text-xs font-medium text-ink-muted">Completed ({completed.length})</p>
             {completed.map((g) => (
-              <GoalBar key={g.id} goal={g} onEdit={(goal) => editGoal(goal.id, goal)} onDelete={deleteGoal} onIncrement={incrementGoal} />
+             <GoalBar
+                   key={g.id}
+                       goal={g}
+                       onEdit={setEditingGoal}
+                       onDelete={deleteGoal}
+                       onIncrement={incrementGoal}
+                      />
             ))}
           </>
         )}
       </CardContent>
+      {editingGoal && (
+  <GoalFormDialog
+    existing={editingGoal}
+    onSave={async (data) => {
+      await editGoal(editingGoal.id, data);
+      setEditingGoal(null);
+    }}
+  >
+    <span />
+  </GoalFormDialog>
+)}
     </Card>
   );
 }

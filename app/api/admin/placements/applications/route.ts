@@ -12,35 +12,19 @@ export async function GET() {
           select: {
             id: true,
             name: true,
-            email: true, // ✅ ADDED
+            email: true,
           },
         },
-        company: true,
       },
       orderBy: {
         appliedAt: "desc",
       },
     });
 
-    // 🔥 attach resume from PlacementProfile
-    const enriched = await Promise.all(
-      applications.map(async (app) => {
-        const profile = await prisma.placementProfile.findUnique({
-          where: { userId: app.userId },
-          select: {
-            resumeUrl: true,
-          },
-        });
-
-        return {
-          ...app,
-          resumeUrl: profile?.resumeUrl || null, // ✅ resume added
-        };
-      })
-    );
-
-    return NextResponse.json(enriched);
+    return NextResponse.json(applications);
   } catch (error) {
+    console.error(error);
+
     return NextResponse.json(
       { error: "Failed to fetch applications" },
       { status: 500 }
@@ -68,12 +52,13 @@ export async function PATCH(req: Request) {
       data: { status },
       include: {
         user: true,
-        company: true,
       },
     });
 
     return NextResponse.json(updated);
   } catch (error) {
+    console.error(error);
+
     return NextResponse.json(
       { error: "Failed to update application" },
       { status: 500 }

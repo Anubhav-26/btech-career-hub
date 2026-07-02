@@ -26,6 +26,7 @@ model User {
   notifications          Notification[]
   pinnedCountdowns       PinnedCountdown[]
   placementApplications  PlacementApplication[]
+  placementProfile       PlacementProfile?
   resourceCompletions    ResourceCompletion[]
   savedItems             SavedItem[]
   studyLogs              StudyLog[]
@@ -377,6 +378,23 @@ model PlacementApplication {
 
   @@index([userId, status])
   @@index([userId, appliedAt])
+}
+
+model PlacementProfile {
+  id     String @id @default(cuid())
+  userId String @unique
+
+  resumeUrl String?
+  skills    String?
+  cgpa      Float?
+  branch    Branch?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model Internship {

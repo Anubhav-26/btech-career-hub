@@ -6,7 +6,22 @@ const prisma = new PrismaClient();
 
 async function main() {
 
+  console.log("Cleaning existing seed data...");
+
+  // Child tables first
   await prisma.fAQ.deleteMany();
+  await prisma.video.deleteMany();
+  await prisma.pYQ.deleteMany();
+  await prisma.resource.deleteMany();
+  await prisma.roadmapStep.deleteMany();
+  await prisma.roadmap.deleteMany();
+  await prisma.examCompany.deleteMany();
+  await prisma.examCountdown.deleteMany();
+
+  console.log("Cleanup completed.");
+
+  // ---------------------------------------------------------------------
+  // GATE CSE
   // ---------------------------------------------------------------------
   // GATE CSE
   // ---------------------------------------------------------------------

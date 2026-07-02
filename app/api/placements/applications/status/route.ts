@@ -15,20 +15,24 @@ export async function PATCH(req: Request) {
 
     const updated = await prisma.placementApplication.update({
       where: { id: applicationId },
+      data: { status },
       include: {
         user: true,
-        company: true,
       },
-      data: { status },
     });
 
     // 📧 EMAIL SEND
     if (updated.user?.email) {
       await sendEmail({
         to: updated.user.email,
-        subject: `Placement Update - ${updated.company?.name}`,
-        text: `Hi ${updated.user.name},  
-Your application status for ${updated.company?.name} is now: ${status}`,
+        subject: `Placement Update - ${updated.companyName}`,
+        text: `Hi ${updated.user.name ?? "Student"},
+
+Your application status for ${updated.companyName} is now: ${status}.
+
+Best of luck!
+
+BTech Career Hub`,
       });
     }
 
@@ -38,7 +42,7 @@ Your application status for ${updated.company?.name} is now: ${status}`,
     });
   } catch (err: any) {
     return NextResponse.json(
-      { error: err.message },
+      { error: err.message || "Internal Server Error" },
       { status: 500 }
     );
   }

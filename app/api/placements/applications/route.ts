@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-// GET all applications
+// ==============================
+// GET ALL APPLICATIONS OF A USER
+// ==============================
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
@@ -16,9 +18,6 @@ export async function GET(req: Request) {
 
     const applications = await prisma.placementApplication.findMany({
       where: { userId },
-      include: {
-        company: true,
-      },
       orderBy: {
         appliedAt: "desc",
       },
@@ -26,6 +25,8 @@ export async function GET(req: Request) {
 
     return NextResponse.json(applications);
   } catch (error) {
+    console.error(error);
+
     return NextResponse.json(
       { error: "Failed to fetch applications" },
       { status: 500 }
@@ -33,24 +34,32 @@ export async function GET(req: Request) {
   }
 }
 
-// POST apply
+// ==============================
+// APPLY TO A COMPANY
+// ==============================
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { userId, companyId, role } = body;
 
-    if (!userId || !companyId) {
+    const {
+      userId,
+      companyName,
+      companySlug,
+      role,
+    } = body;
+
+    if (!userId || !companyName || !role) {
       return NextResponse.json(
-        { error: "Missing fields" },
+        { error: "Missing required fields" },
         { status: 400 }
       );
     }
 
-    // 🔥 STEP YOU ASKED (DUPLICATE CHECK)
+    // Duplicate check
     const existing = await prisma.placementApplication.findFirst({
       where: {
         userId,
-        companyId,
+        companyName,
       },
     });
 
@@ -61,17 +70,19 @@ export async function POST(req: Request) {
       );
     }
 
-    // CREATE APPLICATION
     const application = await prisma.placementApplication.create({
       data: {
         userId,
-        companyId,
+        companyName,
+        companySlug,
         role,
       },
     });
 
     return NextResponse.json(application);
   } catch (error) {
+    console.error(error);
+
     return NextResponse.json(
       { error: "Failed to apply" },
       { status: 500 }

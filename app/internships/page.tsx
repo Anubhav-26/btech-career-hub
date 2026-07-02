@@ -28,17 +28,17 @@ const SOURCES = [
   "Naukri.com",
 ];
 
-type SearchParams = {
+type SearchParams = Promise<{
   workMode?: string;
   branch?: string;
-};
+}>;
 
 export default async function InternshipsPage({
   searchParams,
 }: {
   searchParams?: SearchParams;
 }) {
-  const sp = searchParams ?? {};
+  const sp = (await searchParams) ?? {};
 
   const { items = [], total = 0 } = await listInternships({
     workMode: sp.workMode,
