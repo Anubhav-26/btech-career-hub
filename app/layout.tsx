@@ -136,9 +136,19 @@ export default async function RootLayout({
               <Sidebar role={user?.role} />
 
               {/* MAIN CONTENT AREA */}
-              <main className="flex-1 md:ml-64 min-h-[calc(100dvh-3.5rem)] pb-16 md:pb-0">
-                {children}
-              </main>
+              <main
+  className="
+    flex-1
+    md:ml-20
+    min-h-[calc(100dvh-3.5rem)]
+    pb-16
+    md:pb-0
+    transition-all
+    duration-300
+  "
+>
+  {children}
+</main>
             </div>
 
             {/* FOOTER */}

@@ -136,21 +136,42 @@ model PYQ {
   @@index([examId, year])
 }
 
+enum VideoType {
+  VIDEO
+  PLAYLIST
+}
+
 model Video {
   id              String          @id @default(cuid())
   examId          String
+
   title           String
+
+  videoType       VideoType       @default(VIDEO)
+
   youtubeId       String
+
   channel         String
+
   subject         String?
+
   durationSeconds Int?
+
   thumbnailUrl    String?
+
+  playlistId      String?
+
   createdAt       DateTime        @default(now())
+
   progress        UserProgress[]
+
   exam            Exam            @relation(fields: [examId], references: [id], onDelete: Cascade)
+
   videoProgress   VideoProgress[]
 
   @@index([examId, subject])
+
+  @@index([videoType])
 }
 
 model Company {

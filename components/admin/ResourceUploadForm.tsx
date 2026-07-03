@@ -106,32 +106,46 @@ console.log({
   }
 
   async function submitVideo(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const form = new FormData(e.currentTarget);
-    const examId = await resolveExamId(String(form.get("examSlug")));
-    if (!examId) {
-      setStatus("Exam slug not found");
-      return;
-    }
+  e.preventDefault();
 
-    const token = await getIdToken();
-    const res = await fetch("/api/videos", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({
-        examId,
-        title: form.get("title"),
-        youtubeId: form.get("youtubeId"),
-        channel: form.get("channel"),
-        subject: form.get("subject") || undefined,
-      }),
-    });
-    setStatus(res.ok ? "Video added ✓" : "Failed to add video");
-    if (res.ok) {
-      (e.target as HTMLFormElement).reset();
-      router.refresh();
-    }
+  const form = new FormData(e.currentTarget);
+
+  const examId = await resolveExamId(String(form.get("examSlug")));
+
+  if (!examId) {
+    setStatus("Exam slug not found");
+    return;
   }
+
+  const token = await getIdToken();
+
+  const res = await fetch("/api/videos", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      examId,
+      title: form.get("title"),
+      videoType: form.get("videoType"), // ✅ NEW
+      youtubeId: form.get("youtubeId"), // URL, Video ID ya Playlist ID
+      channel: form.get("channel"),
+      subject: form.get("subject") || undefined,
+    }),
+  });
+
+  setStatus(
+    res.ok
+      ? "Video / Playlist added ✓"
+      : "Failed to add video / playlist"
+  );
+
+  if (res.ok) {
+    (e.target as HTMLFormElement).reset();
+    router.refresh();
+  }
+}
 
   return (
     <div>
@@ -189,22 +203,51 @@ console.log({
         </TabsContent>
 
         <TabsContent value="video">
-          <form onSubmit={submitVideo} className="space-y-3">
-            <ExamSlugField />
-            <Input name="title" placeholder="Video title" required />
-            <div className="grid grid-cols-2 gap-3">
-              <Input name="youtubeId" placeholder="YouTube ID (11 chars)" required />
-              <Input name="channel" placeholder="Channel name" required />
-            </div>
-            <Input name="subject" placeholder="Subject (optional)" />
-            <Button type="submit" className="w-full">
-              Add video
-            </Button>
-          </form>
-        </TabsContent>
-      </Tabs>
+  <form onSubmit={submitVideo} className="space-y-3">
+    <ExamSlugField />
 
-      {status && <p className="mt-3 text-sm text-ink-muted">{status}</p>}
-    </div>
-  );
-}
+    <Input
+      name="title"
+      placeholder="Video / Playlist title"
+      required
+    />
+
+    {/* Video Type */}
+    <Select
+      name="videoType"
+      defaultValue="VIDEO"
+    >
+      <option value="VIDEO">YouTube Video</option>
+      <option value="PLAYLIST">YouTube Playlist</option>
+    </Select>
+
+    {/* YouTube URL / ID */}
+    <Input
+      name="youtubeId"
+      placeholder="Paste YouTube Video / Playlist URL or ID"
+      required
+    />
+
+    {/* Channel */}
+    <Input
+      name="channel"
+      placeholder="Channel Name"
+      required
+    />
+
+    {/* Subject */}
+    <Input
+      name="subject"
+      placeholder="Subject (optional)"
+    />
+
+    <Button
+      type="submit"
+      className="w-full"
+    >
+      Add Video / Playlist
+    </Button>
+
+  </form>
+</TabsContent>
+</Tabs> {status && <p className="mt-3 text-sm text-ink-muted">{status}</p>} </div> ); }
