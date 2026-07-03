@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Lexend, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
+import { getServerUser } from "@/lib/auth";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { Analytics } from "@/components/providers/Analytics";
 import { AuthProvider } from "@/hooks/useAuth";
@@ -99,11 +100,12 @@ const organizationJsonLd = {
 /* ───────────────────────────────
    ROOT LAYOUT
 ─────────────────────────────── */
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const user = await getServerUser();
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -131,7 +133,7 @@ export default function RootLayout({
             {/* MAIN LAYOUT WRAPPER */}
             <div className="flex">
               {/* DESKTOP SIDEBAR */}
-              <Sidebar />
+              <Sidebar role={user?.role} />
 
               {/* MAIN CONTENT AREA */}
               <main className="flex-1 md:ml-64 min-h-[calc(100dvh-3.5rem)] pb-16 md:pb-0">

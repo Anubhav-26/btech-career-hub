@@ -51,7 +51,7 @@ export default async function ExamHubPage({ params }: PageProps) {
     listPyqs({ examSlug: slug }),
     listVideos({ examSlug: slug }),
   ]);
-  console.log("VIDEOS FROM DB:", videos);
+  
 
   const courseJsonLd = {
     "@context": "https://schema.org",

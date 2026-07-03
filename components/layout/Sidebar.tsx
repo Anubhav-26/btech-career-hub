@@ -10,29 +10,45 @@ import {
   Trophy,
   LineChart,
   Settings,
+  Shield,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: Home },
-  { href: "/resources", label: "Resources", icon: BookOpen },
-  { href: "/study", label: "Study Tracker", icon: LineChart },
-  { href: "/goals", label: "Goals", icon: Target },
-  { href: "/placements", label: "Placements", icon: GraduationCap },
-  { href: "/internships", label: "Internships", icon: BookOpen },
-  { href: "/psu", label: "PSU Hub", icon: Trophy },
-  { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
-];
+
 
 const bottomItems = [
   { href: "/settings", label: "Settings", icon: Settings },
 ];
-
-export function Sidebar() {
+interface SidebarProps {
+  role?: string;
+}
+export function Sidebar({ role }: SidebarProps) {
   const pathname = usePathname() || "";
+  const navItems = [
+    { href: "/dashboard", label: "Dashboard", icon: Home },
+    { href: "/resources", label: "Resources", icon: BookOpen },
+    // { href: "/study", label: "Study Tracker", icon: LineChart },
+    // { href: "/goals", label: "Goals", icon: Target },
+    { href: "/placements", label: "Placements", icon: GraduationCap },
+    { href: "/internships", label: "Internships", icon: BookOpen },
+    { href: "/psu", label: "PSU Hub", icon: Trophy },
+    // { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
+
+    ...(role === "ADMIN"
+      ? [
+          {
+            href: "/admin",
+            label: "Admin Panel",
+            icon: Shield,
+          },
+        ]
+      : []),
+  ];
 
   return (
+
+ 
     <aside className="hidden h-[calc(100vh-3.5rem)] w-64 flex-col border-r border-border bg-surface/60 backdrop-blur md:fixed md:left-0 md:top-14 md:flex">
 
       {/* TOP NAV */}
