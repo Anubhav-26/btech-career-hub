@@ -20,13 +20,13 @@ export function FileUploader({
     sizeBytes: number
   ) => void;
 }) {
-  const inputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const folderInputRef = useRef<HTMLInputElement>(null);
 
   const [status, setStatus] =
     useState<"idle" | "uploading" | "done">("idle");
 
   const [progress, setProgress] = useState(0);
-
   const [fileName, setFileName] = useState("");
 
   const { getIdToken } = useAuth();
@@ -44,11 +44,9 @@ export function FileUploader({
     });
 
     const sigJson = await sigRes.json();
-
     const sig = sigJson.data;
 
     const form = new FormData();
-
     form.append("file", file);
     form.append("api_key", sig.apiKey);
     form.append("timestamp", String(sig.timestamp));
@@ -93,11 +91,11 @@ export function FileUploader({
     setStatus("uploading");
     setProgress(0);
 
-    if (files.length === 1) {
-      setFileName(files[0].name);
-    } else {
-      setFileName(`${files.length} files selected`);
-    }
+    setFileName(
+      files.length === 1
+        ? files[0].name
+        : `${files.length} files selected`
+    );
 
     try {
       for (let i = 0; i < files.length; i++) {
@@ -111,9 +109,7 @@ export function FileUploader({
       setStatus("done");
     } catch (err) {
       console.error(err);
-
       alert("Upload failed");
-
       setStatus("idle");
       setProgress(0);
     }
@@ -121,37 +117,63 @@ export function FileUploader({
 
   return (
     <div className="space-y-3">
-      <label
+
+      {/* UI BOX */}
+      <div
         className={cn(
-          "flex cursor-pointer items-center gap-3 rounded-xl border-2 border-dashed border-border p-5 transition",
+          "rounded-xl border-2 border-dashed border-border p-5 transition",
           status === "done"
             ? "border-primary bg-primary/5"
             : "hover:bg-muted"
         )}
       >
-        {status === "done" ? (
-          <CheckCircle2 className="h-6 w-6 text-primary" />
-        ) : (
-          <UploadCloud className="h-6 w-6 text-ink-muted" />
-        )}
+        <div className="flex items-center gap-3">
 
-        <div className="flex-1">
-          <p className="font-medium">
-            {status === "uploading"
-              ? "Uploading..."
-              : fileName || label}
-          </p>
+          {status === "done" ? (
+            <CheckCircle2 className="h-6 w-6 text-primary" />
+          ) : (
+            <UploadCloud className="h-6 w-6 text-ink-muted" />
+          )}
 
-          <p className="text-xs text-muted-foreground mt-1">
-            PDF • ZIP • DOC • DOCX • PPT • PPTX • Images •
-            Multiple Files • Max 100 MB/File
-          </p>
+          <div className="flex-1">
+            <p className="font-medium">
+              {status === "uploading"
+                ? "Uploading..."
+                : fileName || label}
+            </p>
+
+            <p className="text-xs text-muted-foreground mt-1">
+              PDF • Images • DOC • PPT • ZIP • Folder support
+            </p>
+          </div>
         </div>
 
-        <FolderOpen className="h-5 w-5 text-muted-foreground" />
+        {/* BUTTONS */}
+        <div className="mt-4 flex gap-3">
 
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="rounded-md border px-3 py-2 text-sm hover:bg-muted"
+          >
+            <UploadCloud className="mr-2 inline h-4 w-4" />
+            Upload Files
+          </button>
+
+          <button
+            type="button"
+            onClick={() => folderInputRef.current?.click()}
+            className="rounded-md border px-3 py-2 text-sm hover:bg-muted"
+          >
+            <FolderOpen className="mr-2 inline h-4 w-4" />
+            Upload Folder
+          </button>
+
+        </div>
+
+        {/* FILE INPUT */}
         <input
-          ref={inputRef}
+          ref={fileInputRef}
           type="file"
           multiple
           className="hidden"
@@ -168,32 +190,41 @@ application/vnd.ms-powerpoint,
 application/vnd.openxmlformats-officedocument.presentationml.presentation,
 image/*
 "
+        />
+
+        {/* FOLDER INPUT */}
+        <input
+          ref={folderInputRef}
+          type="file"
+          multiple
+          className="hidden"
+          onChange={handleFile}
           {...({ webkitdirectory: "", directory: "" } as any)}
         />
-      </label>
+      </div>
 
+      {/* PROGRESS */}
       {status === "uploading" && (
         <div>
           <div className="h-2 overflow-hidden rounded-full bg-muted">
             <div
-              className="h-full rounded-full bg-primary transition-all"
-              style={{
-                width: `${progress}%`,
-              }}
+              className="h-full bg-primary transition-all"
+              style={{ width: `${progress}%` }}
             />
           </div>
-
-          <p className="mt-1 text-xs text-center text-muted-foreground">
+          <p className="mt-1 text-center text-xs text-muted-foreground">
             {progress}% Uploaded
           </p>
         </div>
       )}
 
+      {/* DONE */}
       {status === "done" && (
         <p className="text-sm text-green-600">
           ✔ Upload Completed Successfully
         </p>
       )}
+
     </div>
   );
 }
