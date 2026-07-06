@@ -16,11 +16,11 @@ function slugify(name: string) {
 }
 
 /* ─────────────────────────────
-   🔐 BRANCH VALIDATION HELPER
+   🔐 BRANCH VALIDATION
 ───────────────────────────── */
 function normalizeBranches(branches: string[] = []): Branch[] {
   return branches.map((b) => {
-    const key = b.toUpperCase();
+    const key = b.trim().toUpperCase();
 
     if (!Object.values(Branch).includes(key as Branch)) {
       throw new Error(`Invalid branch: ${b}`);
@@ -37,26 +37,34 @@ export async function createPSU(data: {
   name: string;
   sector: string;
   avgSalaryLpa?: number;
-  branches: string[];
+  maxSalaryLpa?: number;
   minGateScore?: number;
+  branches: string[];
   description?: string;
   selectionProcess?: string;
+  officialUrl?: string;
+  logoUrl?: string;
 }) {
   await requireAdminServer();
 
   return prisma.pSUCompany.create({
     data: {
-      name: data.name,
+      name: data.name.trim(),
       slug: slugify(data.name),
+
       sector: data.sector,
 
       avgSalaryLpa: data.avgSalaryLpa ?? null,
+      maxSalaryLpa: data.maxSalaryLpa ?? null,
       minGateScore: data.minGateScore ?? null,
+
+      branches: normalizeBranches(data.branches),
 
       description: data.description ?? "",
       selectionProcess: data.selectionProcess ?? "",
 
-      branches: normalizeBranches(data.branches),
+      officialUrl: data.officialUrl ?? null,
+      logoUrl: data.logoUrl ?? null,
     },
   });
 }
@@ -70,24 +78,35 @@ export async function updatePSU(
     name: string;
     sector: string;
     avgSalaryLpa: number;
-    branches: string[];
+    maxSalaryLpa: number;
     minGateScore: number;
+    branches: string[];
     description: string;
     selectionProcess: string;
+    officialUrl: string;
+    logoUrl: string;
+    isActive: boolean;
   }>
 ) {
   await requireAdminServer();
 
-  const updateData: any = {
-    ...data,
-  };
+  const updateData: any = {};
 
-  // slug auto-update if name changes
-  if (data.name) {
+  if (data.name !== undefined) {
+    updateData.name = data.name.trim();
     updateData.slug = slugify(data.name);
   }
 
-  // branches safe conversion
+  if (data.sector !== undefined) updateData.sector = data.sector;
+  if (data.avgSalaryLpa !== undefined) updateData.avgSalaryLpa = data.avgSalaryLpa;
+  if (data.maxSalaryLpa !== undefined) updateData.maxSalaryLpa = data.maxSalaryLpa;
+  if (data.minGateScore !== undefined) updateData.minGateScore = data.minGateScore;
+  if (data.description !== undefined) updateData.description = data.description;
+  if (data.selectionProcess !== undefined) updateData.selectionProcess = data.selectionProcess;
+  if (data.officialUrl !== undefined) updateData.officialUrl = data.officialUrl;
+  if (data.logoUrl !== undefined) updateData.logoUrl = data.logoUrl;
+  if (data.isActive !== undefined) updateData.isActive = data.isActive;
+
   if (data.branches) {
     updateData.branches = normalizeBranches(data.branches);
   }
@@ -110,15 +129,62 @@ export async function deletePSU(id: string) {
 }
 
 /* ─────────────────────────────
-   📄 LIST PSU
+   📄 ADMIN LIST
 ───────────────────────────── */
 export async function listAdminPSUs() {
   await requireAdminServer();
 
   return prisma.pSUCompany.findMany({
-    orderBy: { createdAt: "desc" },
     include: {
       cutoffs: true,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+}
+
+/* ─────────────────────────────
+   🌐 PUBLIC LIST (FIXED + COMPLETE DATA)
+───────────────────────────── */
+export async function listPublicPSUs() {
+  return prisma.pSUCompany.findMany({
+    where: {
+      isActive: true,
+    },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      sector: true,
+      branches: true,
+      minGateScore: true,
+      avgSalaryLpa: true,
+      maxSalaryLpa: true,
+      description: true,
+      selectionProcess: true,
+      officialUrl: true,
+      logoUrl: true,
+      isActive: true,
+    },
+    orderBy: {
+      name: "asc",
+    },
+  });
+}
+
+/* ─────────────────────────────
+   🔍 GET PSU BY SLUG
+───────────────────────────── */
+export async function getPSUBySlug(slug: string) {
+  return prisma.pSUCompany.findUnique({
+    where: { slug },
+    include: {
+      cutoffs: {
+        orderBy: {
+          year: "desc",
+        },
+      },
     },
   });
 }

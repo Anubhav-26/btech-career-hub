@@ -456,24 +456,39 @@ model InternshipApplication {
 
 model PSUCompany {
   id               String      @id @default(cuid())
+
   name             String
   slug             String      @unique
+
   logoUrl          String?
+
   sector           String
+
   branches         Branch[]
+
   minGateScore     Float?
+
   avgSalaryLpa     Float?
+
   maxSalaryLpa     Float?
-  selectionProcess String?
+
   description      String?
+
+  selectionProcess String?
+
   officialUrl      String?
+
   isActive         Boolean     @default(true)
+
   createdAt        DateTime    @default(now())
+
   updatedAt        DateTime    @updatedAt
+
   cutoffs          PSUCutoff[]
 
   @@index([isActive])
 }
+
 
 model PSUCutoff {
   id        String     @id @default(cuid())
@@ -569,13 +584,43 @@ model UserXP {
 }
 
 enum Branch {
+  // Computer
   CSE
+  IT
+  AI
+  AIDS
+  AIML
+  CSBS
+
+  // Electronics
   ECE
+  EEE
+  EE
+  ENTC
+  EIE
+
+  // Core
   ME
   CE
-  EE
-  IT
   CHEMICAL
+  CIVIL
+  PRODUCTION
+  INDUSTRIAL
+  MANUFACTURING
+
+  // Specialized
+  INSTRUMENTATION
+  METALLURGY
+  MINING
+  PETROLEUM
+  AEROSPACE
+  AUTOMOBILE
+  BIOTECHNOLOGY
+  FOOD_TECHNOLOGY
+  TEXTILE
+
+  // Misc.
+  MCA
   OTHER
 }
 

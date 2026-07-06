@@ -1,110 +1,225 @@
 "use client";
 
-import { useState } from "react";
-import { createPSU } from "@/app/admin/psu/actions";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 
-export default function PSUForm() {
-  const [loading, setLoading] = useState(false);
+import { createPSU, updatePSU } from "@/app/admin/psu/actions";
 
-  const [form, setForm] = useState({
-    name: "",
-    sector: "",
-    avgSalaryLpa: "",
-    minGateScore: "",
-    branches: "",
-    description: "",
-    selectionProcess: "",
-  });
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+type PSUFormProps = {
+  mode: "create" | "edit";
+  psu?: {
+    id: string;
+    name: string;
+    sector: string;
+    avgSalaryLpa: number | null;
+    maxSalaryLpa: number | null;
+    minGateScore: number | null;
+    branches: string[];
+    officialUrl: string | null;
+    logoUrl: string | null;
+    description: string | null;
+    selectionProcess: string | null;
   };
+};
 
-  const handleSubmit = async (e: React.FormEvent) => {
+export default function PSUForm({ mode, psu }: PSUFormProps) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+
+  const [name, setName] = useState(psu?.name ?? "");
+  const [sector, setSector] = useState(psu?.sector ?? "");
+  const [avgSalaryLpa, setAvgSalaryLpa] = useState(
+    psu?.avgSalaryLpa?.toString() ?? ""
+  );
+  const [maxSalaryLpa, setMaxSalaryLpa] = useState(
+    psu?.maxSalaryLpa?.toString() ?? ""
+  );
+  const [minGateScore, setMinGateScore] = useState(
+    psu?.minGateScore?.toString() ?? ""
+  );
+  const [branches, setBranches] = useState(
+    psu?.branches?.join(", ") ?? ""
+  );
+  const [officialUrl, setOfficialUrl] = useState(
+    psu?.officialUrl ?? ""
+  );
+  const [logoUrl, setLogoUrl] = useState(psu?.logoUrl ?? "");
+  const [description, setDescription] = useState(
+    psu?.description ?? ""
+  );
+  const [selectionProcess, setSelectionProcess] = useState(
+    psu?.selectionProcess ?? ""
+  );
+
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  const title = useMemo(() => {
+    return mode === "create" ? "Create PSU" : "Edit PSU";
+  }, [mode]);
+
+  function parsePayload() {
+    return {
+      name: name.trim(),
+      sector: sector.trim(),
+      avgSalaryLpa: avgSalaryLpa ? Number(avgSalaryLpa) : undefined,
+      maxSalaryLpa: maxSalaryLpa ? Number(maxSalaryLpa) : undefined,
+      minGateScore: minGateScore ? Number(minGateScore) : undefined,
+      branches: branches
+        .split(",")
+        .map((b) => b.trim())
+        .filter(Boolean),
+      officialUrl: officialUrl.trim() || undefined,
+      logoUrl: logoUrl.trim() || undefined,
+      description: description.trim() || undefined,
+      selectionProcess: selectionProcess.trim() || undefined,
+    };
+  }
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setLoading(true);
 
-    try {
-      await createPSU({
-        name: form.name,
-        sector: form.sector,
-        avgSalaryLpa: form.avgSalaryLpa ? Number(form.avgSalaryLpa) : undefined,
-        minGateScore: form.minGateScore ? Number(form.minGateScore) : undefined,
-        branches: form.branches.split(",").map((b) => b.trim()),
-        description: form.description,
-        selectionProcess: form.selectionProcess,
-      });
+    setError("");
+    setSuccess("");
 
-      setForm({
-        name: "",
-        sector: "",
-        avgSalaryLpa: "",
-        minGateScore: "",
-        branches: "",
-        description: "",
-        selectionProcess: "",
-      });
+    const payload = parsePayload();
 
-      window.location.reload();
-    } catch (err) {
-      console.error(err);
-      alert("Error creating PSU");
-    }
+    startTransition(async () => {
+      try {
+        if (mode === "create") {
+          await createPSU(payload);
 
-    setLoading(false);
-  };
+          setSuccess("PSU created successfully.");
+          router.refresh();
+          router.push("/admin/psu");
+          return;
+        }
+
+        if (!psu?.id) {
+          throw new Error("PSU ID missing");
+        }
+
+        await updatePSU(psu.id, payload);
+
+        setSuccess("PSU updated successfully.");
+        router.refresh();
+        router.push("/admin/psu");
+      } catch (err: any) {
+        setError(err?.message || "Something went wrong");
+      }
+    });
+  }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="rounded-lg border border-border bg-surface p-4 space-y-3"
-    >
-      <h2 className="text-sm font-semibold">Add PSU</h2>
+    <div className="mx-auto max-w-4xl rounded-xl border bg-white p-6 shadow-sm">
+      <h1 className="mb-6 text-2xl font-bold">{title}</h1>
 
-      <Input name="name" placeholder="PSU Name" value={form.name} onChange={handleChange} />
-      <Input name="sector" placeholder="Sector" value={form.sector} onChange={handleChange} />
+      <form onSubmit={handleSubmit} className="space-y-5">
 
-      <div className="grid grid-cols-2 gap-2">
-        <Input
-          name="avgSalaryLpa"
-          placeholder="Avg Salary (LPA)"
-          value={form.avgSalaryLpa}
-          onChange={handleChange}
+        {error && (
+          <div className="rounded bg-red-100 px-3 py-2 text-sm text-red-700">
+            {error}
+          </div>
+        )}
+
+        {success && (
+          <div className="rounded bg-green-100 px-3 py-2 text-sm text-green-700">
+            {success}
+          </div>
+        )}
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <input
+            className="rounded border p-2"
+            placeholder="Name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+
+          <input
+            className="rounded border p-2"
+            placeholder="Sector"
+            value={sector}
+            onChange={(e) => setSector(e.target.value)}
+          />
+
+          <input
+            type="number"
+            className="rounded border p-2"
+            placeholder="Avg Salary"
+            value={avgSalaryLpa}
+            onChange={(e) => setAvgSalaryLpa(e.target.value)}
+          />
+
+          <input
+            type="number"
+            className="rounded border p-2"
+            placeholder="Max Salary"
+            value={maxSalaryLpa}
+            onChange={(e) => setMaxSalaryLpa(e.target.value)}
+          />
+
+          <input
+            type="number"
+            className="rounded border p-2"
+            placeholder="GATE Score"
+            value={minGateScore}
+            onChange={(e) => setMinGateScore(e.target.value)}
+          />
+
+          <input
+            className="rounded border p-2"
+            placeholder="Branches (comma separated)"
+            value={branches}
+            onChange={(e) => setBranches(e.target.value)}
+          />
+
+          <input
+            className="rounded border p-2"
+            placeholder="Official URL"
+            value={officialUrl}
+            onChange={(e) => setOfficialUrl(e.target.value)}
+          />
+
+          <input
+            className="rounded border p-2"
+            placeholder="Logo URL"
+            value={logoUrl}
+            onChange={(e) => setLogoUrl(e.target.value)}
+          />
+        </div>
+
+        <textarea
+          className="w-full rounded border p-2"
+          placeholder="Description"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
         />
-        <Input
-          name="minGateScore"
-          placeholder="Min GATE Score"
-          value={form.minGateScore}
-          onChange={handleChange}
+
+        <textarea
+          className="w-full rounded border p-2"
+          placeholder="Selection Process"
+          value={selectionProcess}
+          onChange={(e) => setSelectionProcess(e.target.value)}
         />
-      </div>
 
-      <Input
-        name="branches"
-        placeholder="Branches (comma separated)"
-        value={form.branches}
-        onChange={handleChange}
-      />
+        <div className="flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={() => router.push("/admin/psu")}
+            className="rounded border px-4 py-2"
+          >
+            Cancel
+          </button>
 
-      <Input
-        name="description"
-        placeholder="Description"
-        value={form.description}
-        onChange={handleChange}
-      />
-
-      <Input
-        name="selectionProcess"
-        placeholder="Selection Process"
-        value={form.selectionProcess}
-        onChange={handleChange}
-      />
-
-      <Button type="submit" disabled={loading}>
-        {loading ? "Creating..." : "Create PSU"}
-      </Button>
-    </form>
+          <button
+            disabled={isPending}
+            className="rounded bg-blue-600 px-4 py-2 text-white"
+          >
+            {mode === "create" ? "Create" : "Update"}
+          </button>
+        </div>
+      </form>
+    </div>
   );
 }
