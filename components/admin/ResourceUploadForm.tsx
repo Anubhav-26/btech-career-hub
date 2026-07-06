@@ -105,7 +105,7 @@ console.log({
     }
   }
 
-  async function submitVideo(e: React.FormEvent<HTMLFormElement>) {
+ async function submitVideo(e: React.FormEvent<HTMLFormElement>) {
   e.preventDefault();
 
   const form = new FormData(e.currentTarget);
@@ -119,26 +119,40 @@ console.log({
 
   const token = await getIdToken();
 
+  const videoType = String(form.get("videoType"));
+  const input = String(form.get("youtubeId"));
+
+  const payload: any = {
+    examId,
+    title: form.get("title"),
+    videoType,
+    channel: form.get("channel"),
+    subject: form.get("subject") || undefined,
+  };
+
+  if (videoType === "VIDEO") {
+    payload.youtubeId = input;
+  } else {
+    payload.playlistId = input;
+  }
+
   const res = await fetch("/api/videos", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({
-      examId,
-      title: form.get("title"),
-      videoType: form.get("videoType"), // ✅ NEW
-      youtubeId: form.get("youtubeId"), // URL, Video ID ya Playlist ID
-      channel: form.get("channel"),
-      subject: form.get("subject") || undefined,
-    }),
+    body: JSON.stringify(payload),
   });
+
+  const json = await res.json();
+
+  console.log(json);
 
   setStatus(
     res.ok
       ? "Video / Playlist added ✓"
-      : "Failed to add video / playlist"
+      : json.error?.message || "Failed to add video / playlist"
   );
 
   if (res.ok) {

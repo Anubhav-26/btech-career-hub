@@ -66,15 +66,11 @@ export const createVideoSchema = z
 
     videoType: videoTypeEnum.default("VIDEO"),
 
-    youtubeId: z
-      .string()
-      .regex(/^[A-Za-z0-9_-]{11}$/)
-      .optional(),
+    // Accepts Video ID OR YouTube URL
+    youtubeId: z.string().min(3).optional(),
 
-    playlistId: z
-      .string()
-      .regex(/^[A-Za-z0-9_-]{10,}$/)
-      .optional(),
+    // Accepts Playlist ID OR Playlist URL
+    playlistId: z.string().min(3).optional(),
 
     channel: z.string().min(2),
 
@@ -87,7 +83,7 @@ export const createVideoSchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["youtubeId"],
-        message: "YouTube Video ID is required",
+        message: "YouTube Video URL or ID is required",
       });
     }
 
@@ -95,25 +91,21 @@ export const createVideoSchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["playlistId"],
-        message: "Playlist ID is required",
+        message: "Playlist URL or ID is required",
       });
     }
   });
 
-  export const updateVideoSchema = z.object({
+export const updateVideoSchema = z.object({
   title: z.string().min(3).optional(),
 
   videoType: videoTypeEnum.optional(),
 
-  youtubeId: z
-    .string()
-    .regex(/^[A-Za-z0-9_-]{11}$/)
-    .optional(),
+  // Accepts Video ID OR URL
+  youtubeId: z.string().min(3).optional(),
 
-  playlistId: z
-    .string()
-    .regex(/^[A-Za-z0-9_-]{10,}$/)
-    .optional(),
+  // Accepts Playlist ID OR URL
+  playlistId: z.string().min(3).optional(),
 
   channel: z.string().min(2).optional(),
 

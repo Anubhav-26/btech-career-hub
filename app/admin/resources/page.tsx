@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { EditVideoModal } from "@/components/admin/EditVideoModal";
 import { DeleteVideoButton } from "@/components/admin/DeleteVideoButton";
 import { EditResourceModal } from "@/components/admin/EditResourceModal";
+import { DeletePyqButton } from "@/components/admin/DeletePyqButton";
+import { EditPyqModal } from "@/components/admin/EditPyqModal";
 import {
   Search,
   Eye,
@@ -18,7 +20,7 @@ import {
 export const dynamic = "force-dynamic";
 
 export default async function AdminResourcesPage() {
-  const [exams, resources, videos, totalResources] = await Promise.all([
+ const [exams, resources, videos, pyqs, totalResources] = await Promise.all([
     prisma.exam.findMany({
       where: { isActive: true },
       select: {
@@ -57,7 +59,18 @@ export default async function AdminResourcesPage() {
         },
       },
     }),
-
+   prisma.pYQ.findMany({
+  orderBy: {
+    createdAt: "desc",
+  },
+  include: {
+    exam: {
+      select: {
+        shortTitle: true,
+      },
+    },
+  },
+}),
     prisma.resource.count(),
   ]);
 
@@ -328,63 +341,169 @@ export default async function AdminResourcesPage() {
           <td className="px-4">
             {video.exam.shortTitle}
           </td>
+<td className="px-4">
+  <div className="flex justify-end gap-2">
 
-          <td className="px-4">
-
-            <div className="flex justify-end gap-2">
-
-              <div className="flex justify-end gap-2">
-
-  <Button
-    variant="outline"
-    size="icon"
-    asChild
-  >
-    <a
-      href={
-  video.playlistId
-    ? `https://www.youtube.com/playlist?list=${video.playlistId}`
-    : `https://www.youtube.com/watch?v=${video.youtubeId}`
-}
-      target="_blank"
-      rel="noopener noreferrer"
+    <Button
+      variant="outline"
+      size="icon"
+      asChild
     >
-      <Eye className="h-4 w-4" />
-    </a>
-  </Button>
+      <a
+        href={
+          video.playlistId
+            ? `https://www.youtube.com/playlist?list=${video.playlistId}`
+            : `https://www.youtube.com/watch?v=${video.youtubeId}`
+        }
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <Eye className="h-4 w-4" />
+      </a>
+    </Button>
 
-  <EditVideoModal
-  video={{
-    id: video.id,
-    title: video.title,
-    youtubeId: video.youtubeId,
-    playlistId: video.playlistId,
-    channel: video.channel,
-    subject: video.subject,
-  }}
-/>
+    <EditVideoModal
+      video={{
+        id: video.id,
+        title: video.title,
+        youtubeId: video.youtubeId,
+        playlistId: video.playlistId,
+        channel: video.channel,
+        subject: video.subject,
+      }}
+    />
 
-  <DeleteVideoButton id={video.id} />
+    <DeleteVideoButton id={video.id} />
 
-</div>
-            </div>
-
-          </td>
+  </div>
+</td>
 
         </tr>
 
       ))}
+
+      {videos.length === 0 && (
+
+        <tr>
+
+          <td
+            colSpan={5}
+            className="py-10 text-center text-muted-foreground"
+          >
+            No videos uploaded yet.
+          </td>
+
+        </tr>
+
+      )}
 
     </tbody>
 
   </table>
 
 </div>
+</div> {/* <-- YE MISSING THA */}
+
+{/* ======================= Uploaded PYQs ======================= */}
+
+{/* ===================== Uploaded PYQs ===================== */}
+
+<div className="mt-10">
+  <h2 className="mb-4 text-lg font-semibold">
+    Uploaded PYQs
+  </h2>
+
+  <div className="overflow-x-auto rounded-xl border">
+    <table className="w-full text-sm">
+      <thead className="bg-muted/40">
+        <tr>
+          <th className="px-4 py-3 text-left">Year</th>
+          <th className="px-4 py-3 text-left">Subject</th>
+          <th className="px-4 py-3 text-left">Exam</th>
+          <th className="px-4 py-3 text-left">Session</th>
+          <th className="px-4 py-3 text-right">Actions</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {pyqs.map((pyq) => (
+          <tr
+            key={pyq.id}
+            className="border-t"
+          >
+            <td className="px-4 py-3 font-medium">
+              {pyq.year}
+            </td>
+
+            <td className="px-4 py-3">
+              {pyq.subject ?? "-"}
+            </td>
+
+            <td className="px-4 py-3">
+              {pyq.exam.shortTitle}
+            </td>
+
+            <td className="px-4 py-3">
+              {pyq.session ?? "-"}
+            </td>
+<td className="px-4 py-3 text-right">
+  <div className="flex justify-end gap-2">
+
+    <Button
+      variant="outline"
+      size="icon"
+      asChild
+    >
+      <a
+        href={pyq.questionUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <Eye className="h-4 w-4" />
+      </a>
+    </Button>
+
+    <EditPyqModal
+      pyq={{
+        id: pyq.id,
+        year: pyq.year,
+        session: pyq.session,
+        subject: pyq.subject,
+        questionUrl: pyq.questionUrl,
+        solutionUrl: pyq.solutionUrl,
+      }}
+    />
+
+    <DeletePyqButton id={pyq.id} />
+
+  </div>
+</td>
+            
+          </tr>
+        ))}
+
+        {pyqs.length === 0 && (
+          <tr>
+            <td
+              colSpan={5}
+              className="py-10 text-center text-muted-foreground"
+            >
+              No PYQs uploaded yet.
+            </td>
+          </tr>
+        )}
+      </tbody>
+    </table>
+  </div>
 </div>
-        </div>
 
-      </div>
+{/* End Right Panel */}
+</div>
 
-    </div>
-  );
+{/* End Grid */}
+</div>
+
+{/* End Page */}
+</div>
+);
 }
