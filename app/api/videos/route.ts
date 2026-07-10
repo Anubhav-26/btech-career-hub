@@ -128,34 +128,32 @@ export async function POST(req: NextRequest) {
     let playlistId: string | null = null;
     let thumbnailUrl: string | null = null;
 
-    if (data.videoType === "VIDEO") {
-      const youtube = parseYoutubeInput(data.youtubeId!);
+   const parsedYoutube = parseYoutubeInput(
+  data.videoType === "VIDEO"
+    ? data.youtubeId!
+    : data.playlistId!
+);
 
-      youtubeId = youtube.youtubeId;
-      thumbnailUrl = youtube.thumbnailUrl;
-    } else {
-      playlistId = data.playlistId!;
-      youtubeId = "";
-      thumbnailUrl = null;
-    }
+if (parsedYoutube.videoType === "VIDEO") {
+  youtubeId = parsedYoutube.youtubeId;
+  playlistId = null;
+  thumbnailUrl = parsedYoutube.thumbnailUrl;
+} else {
+  youtubeId = "";
+  playlistId = parsedYoutube.youtubeId;
+  thumbnailUrl = null;
+}
 
     const video = await prisma.video.create({
       data: {
         examId: data.examId,
         title: data.title,
-
-        videoType: data.videoType,
-
+        videoType: parsedYoutube.videoType,
         youtubeId,
-
         playlistId,
-
         channel: data.channel,
-
         subject: data.subject,
-
         durationSeconds: data.durationSeconds,
-
         thumbnailUrl,
       },
     });

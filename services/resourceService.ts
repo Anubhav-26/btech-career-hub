@@ -107,6 +107,8 @@ export function toVideoCardItem(v: {
   id: string;
   title: string;
   youtubeId: string;
+  playlistId: string | null;
+  videoType: "VIDEO" | "PLAYLIST";
   channel: string;
   exam: { slug: string; shortTitle: string };
 }): ResourceCardItem {
@@ -115,14 +117,21 @@ export function toVideoCardItem(v: {
     kind: "VIDEO",
     title: v.title,
     subtitle: v.channel,
-    badgeLabel: "Video",
 
-    // 👇 Direct YouTube link
-    href: `https://www.youtube.com/watch?v=${v.youtubeId}`,
+    badgeLabel:
+      v.videoType === "PLAYLIST"
+        ? "Playlist"
+        : "Video",
+
+    href:
+      v.videoType === "PLAYLIST"
+        ? `https://www.youtube.com/playlist?list=${v.playlistId}`
+        : `https://www.youtube.com/watch?v=${v.youtubeId}`,
 
     examShortTitle: v.exam.shortTitle,
   };
 }
+  
 
 export async function listPyqs(filters: {
   examSlug?: string;
